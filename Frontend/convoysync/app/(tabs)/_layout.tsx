@@ -5,26 +5,26 @@ import { Text, View } from 'react-native'
 const tabsLayout = () => {
     return (
         <Tabs screenOptions={{
-            tabBarActiveTintColor: "red",
-            tabBarInactiveTintColor: "green",
+            tabBarActiveTintColor: "#60ceb0",
+            tabBarInactiveTintColor: "white",
             tabBarStyle: {
-                backgroundColor: "black",
+                backgroundColor: "#1F1E20",
                 borderTopWidth: 1,
-                borderTopColor: "yellow",
+                borderTopColor: "#354B73",
                 height: 90,
                 paddingBottom: 30,
                 paddingTop: 10,
             },
         }}>
             <Tabs.Screen 
-                name='home' 
+                name='index' 
                 options= {{
                     title: "My Journeys", 
                     tabBarIcon: ({color, size}) => (
-                        <Ionicons name='home' size={size} color={color}/>
+                        <Ionicons name='map' size={size} color={color}/>
                     ),
                 }} 
-            />
+            />,
             <Tabs.Screen 
                 name='archivedTrips' 
                 options= {{
