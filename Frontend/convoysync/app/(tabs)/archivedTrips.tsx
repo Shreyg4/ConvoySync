@@ -1,10 +1,11 @@
 import { Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const archivedTrips = () => {
     return (
-        <View>
+        <SafeAreaView style={{flex: 1}}>
             <Text>Past Trips</Text>
-        </View>
+        </SafeAreaView>
     )
 }
 

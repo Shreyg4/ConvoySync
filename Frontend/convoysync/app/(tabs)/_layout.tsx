@@ -5,16 +5,27 @@ import { Text, View } from 'react-native'
 const tabsLayout = () => {
     return (
         <Tabs screenOptions={{
-            tabBarActiveTintColor: "#60ceb0",
+            tabBarActiveTintColor: "#76E0BB",
             tabBarInactiveTintColor: "white",
             tabBarStyle: {
-                backgroundColor: "#1F1E20",
+                backgroundColor: "black",
                 borderTopWidth: 1,
                 borderTopColor: "#354B73",
                 height: 90,
                 paddingBottom: 30,
                 paddingTop: 10,
+                shadowColor: "#60ceb0",
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 10, 
+                elevation: 10,
+
             },
+            tabBarLabelStyle: {
+                fontSize: 12,
+                fontWeight: 600,
+            },
+            headerShown: false,
         }}>
             <Tabs.Screen 
                 name='index' 
