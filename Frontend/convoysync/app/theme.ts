@@ -1,68 +1,76 @@
-export const COLORS = {
-  // Backgrounds
-  background: '#121212',
-  surface: '#1F1E20',    
-  mapBase: '#151416',    
+export const THEME = {  
+    COLOR: {
+        // Backgrounds
+        surface: '#1F1E20',    
+        mapBase: '#151416',    
   
-  // Brand Accents
-  mint: '#76E0BB',       
-  sky: '#7BACCD',        
-  purple: '#C977DB',     
-  navy: '#354B73',      
+        // Brand Accents
+        mint: '#76E0BB',
+        mintDark: '#60ceb0',       
+        sky: '#7BACCD',        
+        purple: '#C977DB',     
+        navy: '#354B73',      
   
-  // Status
-  success: '#22C55E',    
-  warning: '#EAB308',   
-  error: '#EF4444',      
+        // Status
+        success: '#22C55E',    
+        warning: '#EAB308',   
+        error: '#EF4444',      
   
-  // Neutral
-  white: '#FFFFFF',
-  black: '#000000',
-  neutral400: '#A3A3A3',
-  neutral500: '#737373', 
-  border: 'rgba(255, 255, 255, 0.1)',
-};
+        // Neutral
+        white: '#FFFFFF',
+        black: '#000000',
+        neutral400: '#A3A3A3',
+        neutral500: '#737373', 
+        border: 'rgba(255, 255, 255, 0.1)', 
+    },
 
-export const SPACING = {
-  xs: 4,   
-  sm: 8,  
-  md: 16,  
-  lg: 24,  
-  xl: 32,  
-  xxl: 40, 
-  huge: 48, 
-};
 
-export const FONT_SIZES = {
-  overline: 10,
-  xs: 12,      
-  sm: 14,       
-  md: 16,       
-  lg: 18,       
-  xl: 20,     
-  xxl: 24,      
-  xxxl: 30,     
-};
+    SPACING: {
+        xs: 4,   
+        sm: 8,  
+        md: 16,  
+        lg: 24,  
+        xl: 32,  
+        xxl: 40, 
+        huge: 48, 
+    },
 
-export const FONT_WEIGHTS = {
-  medium: '500',
-  semibold: '600',
-  bold: '700',    
-  black: '900',    
-};
+    FONT_SIZE: {
+        overline: 10,
+        xs: 12,      
+        sm: 14,       
+        md: 16,       
+        lg: 18,       
+        xl: 20,     
+        xxl: 24,      
+        xxxl: 30,   
+    },
 
-export const BORDER_RADIUS = {
-  sm: 4,  
-  md: 8,  
-  lg: 12, 
-  xl: 16, 
-  xxl: 24, 
-  round: 9999, 
-};
+    FONT_WEIGHT: {
+        medium: '500',
+        semibold: '600',
+        bold: '700',    
+        black: '900', 
+    },
 
-export const LETTER_SPACING = {
-  tight: '-0.025em',
-  tighter: '-0.05em',
-  widest: '0.1em', 
-  brand: '0.2em',  
-};
+    BORDER_RADIUS: {
+        sm: 4,  
+        md: 8,  
+        lg: 12, 
+        xl: 16, 
+        xxl: 24, 
+        xxxl: 9999, 
+    },
+
+    LETTER_SPACING: {
+        tight: '-0.025em',
+        tighter: '-0.05em',
+        widest: '0.1em', 
+        brand: '0.2em',  
+    },
+
+    GLOW: {
+
+    }
+
+} as const;

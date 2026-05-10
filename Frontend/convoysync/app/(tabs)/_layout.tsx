@@ -1,29 +1,25 @@
 import { Tabs } from 'expo-router';
 import {Ionicons} from "@expo/vector-icons"
-import { Text, View } from 'react-native'
+import { THEME } from '../theme'
 
 const tabsLayout = () => {
     return (
         <Tabs screenOptions={{
-            tabBarActiveTintColor: "#76E0BB",
-            tabBarInactiveTintColor: "white",
+            tabBarActiveTintColor: THEME.COLOR.mint,
+            tabBarInactiveTintColor: THEME.COLOR.white,
             tabBarStyle: {
-                backgroundColor: "black",
+                backgroundColor: THEME.COLOR.black,
                 borderTopWidth: 1,
-                borderTopColor: "#354B73",
+                borderTopColor: THEME.COLOR.black,
                 height: 90,
                 paddingBottom: 30,
                 paddingTop: 10,
-                shadowColor: "#60ceb0",
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8,
-                shadowRadius: 10, 
-                elevation: 10,
 
             },
             tabBarLabelStyle: {
-                fontSize: 12,
-                fontWeight: 600,
+                fontSize: THEME.FONT_SIZE.xs,
+                fontWeight: THEME.FONT_WEIGHT.bold,
+                shadowColor: THEME.COLOR.mint,
             },
             headerShown: false,
         }}>
@@ -42,6 +38,15 @@ const tabsLayout = () => {
                     title: "Saved Trips", 
                     tabBarIcon: ({color, size}) => (
                         <Ionicons name='archive' size={size} color={color}/>
+                    )
+                }} 
+            />
+            <Tabs.Screen 
+                name='joinTrip' 
+                options= {{
+                    title: "Join Trip", 
+                    tabBarIcon: ({color, size}) => (
+                        <Ionicons name='people' size={size} color={color}/>
                     )
                 }} 
             />

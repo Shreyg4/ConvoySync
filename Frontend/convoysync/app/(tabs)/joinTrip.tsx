@@ -1,13 +1,13 @@
-import { Text } from 'react-native'
+import { Text, View, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles';
 
-const archivedTrips = () => {
+const joinTrip = () => {
     return (
         <SafeAreaView style={globalStyles.container}>
-            <Text style={globalStyles.title}>Saved Trips</Text>
+            <Text style={globalStyles.title}>Join Trip</Text>
         </SafeAreaView>
     )
 }
 
-export default archivedTrips;
+export default joinTrip;
