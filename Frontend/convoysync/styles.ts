@@ -13,6 +13,13 @@ export const globalStyles = StyleSheet.create({
     fontSize: THEME.FONT_SIZE.xxxl,
     fontWeight: THEME.FONT_WEIGHT.black,
   },
+  input: {
+    backgroundColor: THEME.COLOR.surface,
+    color: THEME.COLOR.neutral400,
+    padding: THEME.SPACING.md,
+    borderRadius: THEME.BORDER_RADIUS.xl,
+    marginTop: THEME.SPACING.lg,
+  },
   Button1: {
     backgroundColor: THEME.COLOR.mint,
     paddingVertical: THEME.SPACING.md,
