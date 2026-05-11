@@ -1,6 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalStyles } from './styles';
-import BackHeader from './components/BackHeader';
+import { globalStyles } from '../styles';
+import BackHeader from '../components/BackHeader';
 
 const createTrip = () => {
     return (

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import {Ionicons} from "@expo/vector-icons"
-import { THEME } from '../theme'
+import { THEME } from '../../theme'
 
 const tabsLayout = () => {
     return (
@@ -31,7 +31,7 @@ const tabsLayout = () => {
                         <Ionicons name='map' size={size} color={color}/>
                     ),
                 }} 
-            />,
+            />
             <Tabs.Screen 
                 name='archivedTrips' 
                 options= {{

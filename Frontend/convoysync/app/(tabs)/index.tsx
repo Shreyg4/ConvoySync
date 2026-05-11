@@ -1,8 +1,8 @@
 import { Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalStyles } from '../styles';
+import { globalStyles } from '../../styles';
 import { Link } from 'expo-router';
-import HapticPressable from '../components/pressableCustomization';
+import HapticPressable from '../../components/pressableCustomization';
 
 const home = () => {
     return (
