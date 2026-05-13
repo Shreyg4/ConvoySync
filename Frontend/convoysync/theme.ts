@@ -55,5 +55,4 @@ export const THEME = {
     widest: '0.1em',
     brand: '0.2em',
   },
-  GLOW: {},
 } as const;

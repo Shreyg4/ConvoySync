@@ -24,7 +24,7 @@ const tabsLayout = () => {
             headerShown: false,
         }}>
             <Tabs.Screen 
-                name='index' 
+                name='home' 
                 options= {{
                     title: "My Journeys", 
                     tabBarIcon: ({color, size}) => (

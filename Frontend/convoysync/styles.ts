@@ -8,6 +8,10 @@ export const globalStyles = StyleSheet.create({
     justifyContent: 'flex-start',
     padding: THEME.SPACING.lg,
   },
+  box: {
+    width: 100,
+    height: 100,
+  },
   title: {
     color: THEME.COLOR.white,
     fontSize: THEME.FONT_SIZE.xxxl,
