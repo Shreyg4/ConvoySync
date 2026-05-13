@@ -75,10 +75,10 @@ const createTrip = () => {
                 control={control}
                 name="tripDate"
                 rules={{ required: 'Trip date is required' }}
-                render={({ field: {onChange, value}}) => 
+                render={({ field: {onChange, value}, fieldState: { error } }) => 
                 <>
                     <HapticPressable onPress={showDatePicker}>
-                        <Text style={[globalStyles.input]}>{selectedDate.toLocaleDateString()}</Text>
+                        <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }]}>{selectedDate.toLocaleDateString()}</Text>
                     </HapticPressable>
                     <DateTimePickerModal
                         isVisible={isDatePickerVisible}
@@ -96,10 +96,10 @@ const createTrip = () => {
                 control={control}
                 name="tripTime"
                 rules={{ required: 'Trip time is required' }}
-                render={({ field: {onChange, value} }) => (
+                render={({ field: {onChange, value}, fieldState: { error } }) => (
                     <>
                         <HapticPressable onPress={showTimePicker}>
-                            <Text style={[globalStyles.input]}>{selectedTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</Text>
+                            <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }]}>{selectedTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</Text>
                         </HapticPressable>
                         <DateTimePickerModal
                             isVisible={isTimePickerVisible}

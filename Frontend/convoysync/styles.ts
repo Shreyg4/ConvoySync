@@ -60,6 +60,23 @@ export const globalStyles = StyleSheet.create({
     fontSize: THEME.FONT_SIZE.lg,
     fontWeight: THEME.FONT_WEIGHT.medium,
   },
+  logOutButton: {
+    borderStyle: 'solid',
+    borderColor: THEME.COLOR.neutral500,
+    borderWidth: 1,
+    backgroundColor: THEME.COLOR.surface,
+    paddingVertical: THEME.SPACING.md,
+    paddingHorizontal: THEME.SPACING.lg,
+    borderRadius: THEME.BORDER_RADIUS.xl,
+    marginTop: THEME.SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logOutButtonText: {
+    color: THEME.COLOR.error,
+    fontSize: THEME.FONT_SIZE.lg,
+    fontWeight: THEME.FONT_WEIGHT.medium,
+  },
   dateBar: {
     backgroundColor: THEME.COLOR.surface,
     borderRadius: THEME.BORDER_RADIUS.xl,
