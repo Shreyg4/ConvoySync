@@ -27,14 +27,20 @@ export const globalStyles = StyleSheet.create({
     padding: THEME.SPACING.md,
     borderRadius: THEME.BORDER_RADIUS.xl,
   },
-  Button1: {
+  SubmitButton: {
     backgroundColor: THEME.COLOR.mint,
     paddingVertical: THEME.SPACING.md,
     borderRadius: THEME.BORDER_RADIUS.xl,
     marginTop: THEME.SPACING.lg,
     alignItems: 'center',
+    boxShadow: '0 0 15px 5px #0c4131',
   },
-  Button2: {
+  SubmitButtonText: {
+    color: THEME.COLOR.black,
+    fontSize: THEME.FONT_SIZE.lg,
+    fontWeight: THEME.FONT_WEIGHT.black,
+  },
+  AddButton: {
     borderStyle: 'dashed',
     borderColor: THEME.COLOR.neutral500,
     borderWidth: 1,
@@ -45,8 +51,18 @@ export const globalStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ButtonText2: {
+  AddButtonText: {
     color: THEME.COLOR.neutral500,
+    fontSize: THEME.FONT_SIZE.lg,
+    fontWeight: THEME.FONT_WEIGHT.medium,
+  },
+  dateBar: {
+    backgroundColor: THEME.COLOR.surface,
+    borderRadius: THEME.BORDER_RADIUS.xl,
+    justifyContent: 'center',
+  },
+  dateText: {
+    color: THEME.COLOR.neutral400,
     fontSize: THEME.FONT_SIZE.lg,
     fontWeight: THEME.FONT_WEIGHT.medium,
   },

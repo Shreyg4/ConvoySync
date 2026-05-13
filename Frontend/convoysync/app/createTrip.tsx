@@ -2,13 +2,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles';
 import BackHeader from '../components/BackHeader';
 import { useForm, Controller } from 'react-hook-form';
-import { TextInput, Text} from 'react-native';
+import { TextInput, Text, Pressable, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import React, { useState } from 'react';
-import { Button } from '@react-navigation/elements';
+import HapticPressable from '../components/pressableCustomization';
 
 const createTrip = () => {
-    const { control, handleSubmit } = useForm({
+    const { control, handleSubmit, setValue } = useForm({
         defaultValues: {
             tripName: '',
             tripDate: '',
@@ -17,6 +17,10 @@ const createTrip = () => {
     });
 
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+    const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [selectedTime, setSelectedTime] = useState<Date>(new Date());
 
     const showDatePicker = () => {
         setDatePickerVisibility(true);
@@ -26,20 +30,39 @@ const createTrip = () => {
         setDatePickerVisibility(false);
     };
 
-    const handleConfirm = (date: Date) => {
+    const showTimePicker = () => {
+        setTimePickerVisibility(true);
+    };
+
+    const hideTimePicker = () => {
+        setTimePickerVisibility(false);
+    };
+
+    const handleDateConfirm = (date: Date) => {
+        setSelectedDate(date);
+        setValue('tripDate', date.toISOString());
         console.warn("A date has been picked: ", date);
         hideDatePicker();
     };
+
+    const handleTimeConfirm = (time: Date) => {
+        setSelectedTime(time);
+        setValue('tripTime', time.toISOString());
+        console.warn("A time has been picked: ", time);
+        hideTimePicker();
+    };
     return (
-        <SafeAreaView style={globalStyles.container}>
-            <BackHeader title="Create Trip" />
-            <Text style={globalStyles.inputTitle}>Trip Name</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <SafeAreaView style={globalStyles.container}>
+                <BackHeader title="Create Trip" />
+                <Text style={globalStyles.inputTitle}>Trip Name</Text>
             <Controller
                 control={control}
                 name="tripName"
-                render={({ field: {onChange, value}}) => (
+                rules={{ required: 'Trip name is required' }}
+                render={({ field: {onChange, value}, fieldState: { error } }) => (
                     <TextInput
-                        style={globalStyles.input}
+                        style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }]}
                         placeholder="Enter trip name"
                         placeholderTextColor={globalStyles.input.color}
                         onChangeText={onChange}
@@ -51,37 +74,49 @@ const createTrip = () => {
             <Controller
                 control={control}
                 name="tripDate"
+                rules={{ required: 'Trip date is required' }}
                 render={({ field: {onChange, value}}) => 
                 <>
-                    <Button onPress={showDatePicker}>Select Date</Button>
+                    <HapticPressable onPress={showDatePicker}>
+                        <Text style={[globalStyles.input]}>{selectedDate.toLocaleDateString()}</Text>
+                    </HapticPressable>
                     <DateTimePickerModal
                         isVisible={isDatePickerVisible}
                         mode="date"
                         display="inline"
-                        onConfirm={handleConfirm}
+                        date={selectedDate}
+                        onConfirm={handleDateConfirm}
                         onCancel={hideDatePicker}
                     />
                 </>
                 }
             />
-            <Text style={globalStyles.inputTitle}>Trip Time</Text>
+            <Text style={globalStyles.inputTitle}>Trip Start Time</Text>
             <Controller
                 control={control}
                 name="tripTime"
-                render={({ field: {onChange, value}}) => 
-                <>
-                    <Button onPress={showDatePicker}>Select Time</Button>
-                    <DateTimePickerModal
-                        isVisible={isDatePickerVisible}
-                        mode="time"
-                        display="spinner"
-                        onConfirm={handleConfirm}
-                        onCancel={hideDatePicker}
-                    />
-                </>
-                }
+                rules={{ required: 'Trip time is required' }}
+                render={({ field: {onChange, value} }) => (
+                    <>
+                        <HapticPressable onPress={showTimePicker}>
+                            <Text style={[globalStyles.input]}>{selectedTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</Text>
+                        </HapticPressable>
+                        <DateTimePickerModal
+                            isVisible={isTimePickerVisible}
+                            mode="time"
+                            display="spinner"
+                            date={selectedTime}
+                            onConfirm={handleTimeConfirm}
+                            onCancel={hideTimePicker}
+                        />
+                    </>
+                )}
             />
-        </SafeAreaView>
+                <HapticPressable onPress={handleSubmit((data) => console.log(data))} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
+                    <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
+                </HapticPressable>
+            </SafeAreaView>
+        </TouchableWithoutFeedback>
     )
 }
 

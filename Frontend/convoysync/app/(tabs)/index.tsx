@@ -9,8 +9,8 @@ const home = () => {
         <SafeAreaView style={globalStyles.container}>
             <Text style={globalStyles.title}>My Journeys</Text>
             <Link href="/createTrip" asChild>
-                <HapticPressable style={globalStyles.Button2} hapticStyle="light" showVisualFeedback>
-                    <Text style={globalStyles.ButtonText2}>+ Plan New Adventure</Text>
+                <HapticPressable style={globalStyles.AddButton} hapticStyle="light" showVisualFeedback>
+                    <Text style={globalStyles.AddButtonText}>+ Plan New Adventure</Text>
                 </HapticPressable>
             </Link>
         </SafeAreaView>
