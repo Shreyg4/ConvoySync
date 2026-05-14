@@ -54,7 +54,7 @@ const createTrip = () => {
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <SafeAreaView style={globalStyles.container}>
-                <BackHeader title="Create Trip" />
+                <BackHeader title="Create Trip" icon="arrow-back" />
                 <Text style={globalStyles.inputTitle}>Trip Name</Text>
             <Controller
                 control={control}
