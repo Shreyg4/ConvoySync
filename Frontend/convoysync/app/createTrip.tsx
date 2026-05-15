@@ -6,6 +6,7 @@ import { TextInput, Text, Pressable, Keyboard, TouchableWithoutFeedback } from '
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
+import { THEME } from '@/theme';
 
 const createTrip = () => {
     const { control, handleSubmit, setValue } = useForm({
@@ -54,7 +55,7 @@ const createTrip = () => {
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <SafeAreaView style={globalStyles.container}>
-                <BackHeader title="Create Trip" icon="arrow-back" />
+                <BackHeader title="Create Trip" icon="arrow-back" color={THEME.COLOR.mint} />
                 <Text style={globalStyles.inputTitle}>Trip Name</Text>
             <Controller
                 control={control}

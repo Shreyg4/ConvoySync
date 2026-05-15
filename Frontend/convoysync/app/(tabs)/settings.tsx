@@ -4,7 +4,7 @@ import { globalStyles } from '../../styles';
 import { Link } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
 
-const home = () => {
+const settings = () => {
     return (
         <SafeAreaView style={globalStyles.container}>
             <Text style={globalStyles.title}>Settings</Text>
@@ -17,4 +17,4 @@ const home = () => {
     )
 }
 
-export default home;
+export default settings;

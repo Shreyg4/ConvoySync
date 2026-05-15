@@ -1,13 +1,31 @@
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalStyles } from '../styles';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { THEME } from '../theme';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import BackHeader from '@/components/BackHeader';
+import { globalStyles } from '../styles';
 
-const home = () => {
+const map = () => {
+    const insets = useSafeAreaInsets();
+
     return (
-        <SafeAreaView style={globalStyles.container}>
-            <BackHeader title="" icon="close" />
-        </SafeAreaView>
+        <>
+            <SafeAreaView pointerEvents="box-none" style={globalStyles.mapContainer}>
+                <BackHeader title="" icon="close-circle" color='black' />
+            </SafeAreaView>
+            <MapView
+                provider={PROVIDER_GOOGLE}
+                mapType="satellite"
+                style={{ flex: 1 }}
+                initialRegion={{
+                    latitude: 47.758614083202346,
+                    longitude: -122.19083971360043,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                }}
+            />
+        </>
     )
 }
 
-export default home;
+export default map;
