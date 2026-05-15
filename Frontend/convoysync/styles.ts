@@ -107,4 +107,9 @@ export const globalStyles = StyleSheet.create({
     color: "#000",
     fontWeight: "700",
   },
+  mapContainer: {
+    position: 'absolute',
+    zIndex: 1,
+    left: 15,
+  },
 });

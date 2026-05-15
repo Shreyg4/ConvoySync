@@ -5,7 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 
-const home = () => {
+const login = () => {
     const { control, handleSubmit, setValue } = useForm({
             defaultValues: {
                 username: '',
@@ -65,5 +65,5 @@ const home = () => {
     )
 }
 
-export default home;
+export default login;
 
