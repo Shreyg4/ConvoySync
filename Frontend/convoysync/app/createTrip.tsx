@@ -2,13 +2,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles';
 import BackHeader from '../components/BackHeader';
 import { useForm, Controller } from 'react-hook-form';
-import { TextInput, Text, Pressable, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { TextInput, Text, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 
-const createTrip = () => {
+const CreateTrip = () => {
     const { control, handleSubmit, setValue } = useForm({
         defaultValues: {
             tripName: '',
@@ -20,8 +20,7 @@ const createTrip = () => {
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
 
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-    const [selectedTime, setSelectedTime] = useState<Date>(new Date());
+    
 
     const showDatePicker = () => {
         setDatePickerVisibility(true);
@@ -40,14 +39,12 @@ const createTrip = () => {
     };
 
     const handleDateConfirm = (date: Date) => {
-        setSelectedDate(date);
         setValue('tripDate', date.toISOString());
         console.warn("A date has been picked: ", date);
         hideDatePicker();
     };
 
     const handleTimeConfirm = (time: Date) => {
-        setSelectedTime(time);
         setValue('tripTime', time.toISOString());
         console.warn("A time has been picked: ", time);
         hideTimePicker();
@@ -76,16 +73,16 @@ const createTrip = () => {
                 control={control}
                 name="tripDate"
                 rules={{ required: 'Trip date is required' }}
-                render={({ field: {onChange, value}, fieldState: { error } }) => 
+                render={({ field: {value}, fieldState: { error } }) => 
                 <>
                     <HapticPressable onPress={showDatePicker}>
-                        <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }]}>{selectedDate.toLocaleDateString()}</Text>
+                        <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }, !value && { color: globalStyles.input.color }]}>{value ? new Date(value).toLocaleDateString() : 'Choose date'}</Text>
                     </HapticPressable>
                     <DateTimePickerModal
                         isVisible={isDatePickerVisible}
                         mode="date"
                         display="inline"
-                        date={selectedDate}
+                        date={value ? new Date(value) : new Date()}
                         onConfirm={handleDateConfirm}
                         onCancel={hideDatePicker}
                     />
@@ -97,16 +94,16 @@ const createTrip = () => {
                 control={control}
                 name="tripTime"
                 rules={{ required: 'Trip time is required' }}
-                render={({ field: {onChange, value}, fieldState: { error } }) => (
+                render={({ field: {value}, fieldState: { error } }) => (
                     <>
                         <HapticPressable onPress={showTimePicker}>
-                            <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }]}>{selectedTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</Text>
+                            <Text style={[globalStyles.input, error && { borderColor: 'red', borderWidth: 1 }, !value && { color: globalStyles.input.color }]}>{value ? new Date(value).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : 'Choose time'}</Text>
                         </HapticPressable>
                         <DateTimePickerModal
                             isVisible={isTimePickerVisible}
                             mode="time"
                             display="spinner"
-                            date={selectedTime}
+                            date={value ? new Date(value) : new Date()}
                             onConfirm={handleTimeConfirm}
                             onCancel={hideTimePicker}
                         />
@@ -121,4 +118,4 @@ const createTrip = () => {
     )
 }
 
-export default createTrip;
+export default CreateTrip;

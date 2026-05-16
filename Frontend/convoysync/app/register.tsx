@@ -5,8 +5,8 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 
-const register = () => {
-    const { control, handleSubmit, setValue, setError } = useForm({
+const Register = () => {
+    const { control, handleSubmit, setError } = useForm({
             defaultValues: {
                 email: '',
                 username: '',
@@ -98,5 +98,5 @@ const register = () => {
     )
 }
 
-export default register;
+export default Register;
 

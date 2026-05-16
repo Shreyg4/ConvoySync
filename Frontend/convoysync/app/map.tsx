@@ -1,13 +1,9 @@
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View } from 'react-native';
-import { THEME } from '../theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import BackHeader from '@/components/BackHeader';
 import { globalStyles } from '../styles';
 
-const map = () => {
-    const insets = useSafeAreaInsets();
-
+const Map = () => {
     return (
         <>
             <SafeAreaView pointerEvents="box-none" style={globalStyles.mapContainer}>
@@ -28,4 +24,4 @@ const map = () => {
     )
 }
 
-export default map;
+export default Map;

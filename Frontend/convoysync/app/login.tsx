@@ -5,8 +5,8 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 
-const login = () => {
-    const { control, handleSubmit, setValue } = useForm({
+const Login = () => {
+    const { control, handleSubmit } = useForm({
             defaultValues: {
                 username: '',
                 password: '',
@@ -56,7 +56,7 @@ const login = () => {
                     </HapticPressable>
                     <Link href="/register" asChild>
                         <HapticPressable hapticStyle="light" showVisualFeedback>
-                            <Text style={[globalStyles.SubmitButtonText, {color: 'white', marginTop: 40, textAlign: 'center'}]}>Don't have an account? Register</Text>
+                            <Text style={[globalStyles.SubmitButtonText, {color: 'white', marginTop: 40, textAlign: 'center'}]}>{"Don't have an account? Register"}</Text>
                         </HapticPressable>
                     </Link>
                 </ScrollView>
@@ -65,5 +65,5 @@ const login = () => {
     )
 }
 
-export default login;
+export default Login;
 

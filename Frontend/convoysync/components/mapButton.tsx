@@ -1,4 +1,4 @@
-import { Text } from 'react-native'
+
 import { globalStyles } from '../styles';
 import HapticPressable from '../components/pressableCustomization';
 import { useRouter, usePathname } from 'expo-router';

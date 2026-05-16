@@ -1,4 +1,4 @@
-import { Keyboard, Text, View, Image } from 'react-native'
+import { Text, View, Image } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles';
 import { Link } from 'expo-router';
