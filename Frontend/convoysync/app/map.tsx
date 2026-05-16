@@ -6,7 +6,7 @@ import { globalStyles } from '../styles';
 const Map = () => {
     return (
         <>
-            <SafeAreaView pointerEvents="box-none" style={globalStyles.mapContainer}>
+            <SafeAreaView style={globalStyles.mapContainer}>
                 <BackHeader title="" icon="close-circle" color='black' />
             </SafeAreaView>
             <MapView
