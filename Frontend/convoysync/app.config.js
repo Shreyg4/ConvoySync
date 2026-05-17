@@ -1,9 +1,9 @@
 import 'dotenv/config';
 
 export default ({ config }) => {
-  const iosMapsApiKey = process.env.IOS_MAPS_API_KEY || process.env.MAPS_API_KEY;
+  const iosMapsApiKey = process.env.IOS_MAPS_API_KEY;
   const androidMapsApiKey =
-    process.env.ANDROID_MAPS_API_KEY || process.env.MAPS_API_KEY;
+    process.env.ANDROID_MAPS_API_KEY;
 
   return {
     ...config,

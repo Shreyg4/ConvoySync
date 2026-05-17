@@ -10,10 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.shreyg4.convoysync",
-      "config": {
-        "googleMapsApiKey": "AIzaSyBN3HGN25EynkRNfL9eBETarPuuuMXsaR8"
-      }
+      "bundleIdentifier": "com.shreyg4.convoysync"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,12 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.shreyg4.convoysync",
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyBN3HGN25EynkRNfL9eBETarPuuuMXsaR8"
-        }
-      }
+      "package": "com.shreyg4.convoysync"
     },
     "web": {
       "output": "static",
@@ -49,7 +41,13 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow ConvoySync to use your location."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
