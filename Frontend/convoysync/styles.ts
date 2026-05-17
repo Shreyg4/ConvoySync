@@ -116,4 +116,71 @@ export const globalStyles = StyleSheet.create({
     zIndex: 1,
     left: 15,
   },
+  searchContainer: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    zIndex: 2,
+  },
+  searchContainer2: {
+    position: 'absolute',
+    top: 0,
+    width: '100%',
+    zIndex: 1,
+  },
+  textInputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 25, // Sleek rounded pill design
+    paddingHorizontal: 15,
+    marginHorizontal: 15,
+    marginTop: 65, // Spaced to clear the back button
+    elevation: 5, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  textInput: {
+    height: 50,
+    color: '#000',
+    fontSize: 16,
+    backgroundColor: 'transparent',
+  },
+  listView: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 15,
+    marginHorizontal: 15,
+    marginTop: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  tripInfoCard: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    alignItems: 'center',
+  },
+  timeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#10b981',
+  },
+  distanceText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '600',
+    marginTop: 2,
+  }
 });
