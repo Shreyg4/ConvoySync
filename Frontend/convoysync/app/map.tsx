@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Keyboard, Text } from 'react-native';
+import { View, StyleSheet, Keyboard, Text, TouchableOpacity } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import GooglePlacesTextInput from 'react-native-google-places-textinput';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
 import { globalStyles } from '../styles';
@@ -16,6 +17,10 @@ const Map = () => {
     const [locationGranted, setLocationGranted] = useState(false);
     const [distance, setDistance] = useState<number>(0);
     const [duration, setDuration] = useState<number>(0);
+    const [isRoutingMode, setIsRoutingMode] = useState(false);
+    const [customOrigin, setCustomOrigin] = useState<any>(null);
+
+    const activeOrigin = customOrigin || origin;
 
     //Requst permission and show current location
     useEffect(() => {
@@ -64,10 +69,19 @@ const Map = () => {
                     />
                 )}
 
+                {/* Marker for custom origin */}
+                {customOrigin && (
+                    <Marker
+                        coordinate={customOrigin}
+                        title="Origin"
+                        pinColor="green"
+                    />
+                )}
+
                 {/* Route line connecting user to destination */}
-                {origin && destination && (
+                {isRoutingMode && activeOrigin && destination && (
                     <MapViewDirections
-                        origin={origin}
+                        origin={activeOrigin}
                         destination={destination}
                         apikey={GOOGLE_API_KEY}
                         strokeColor='blue'
@@ -90,36 +104,113 @@ const Map = () => {
                 <BackHeader title="" icon="close-circle" color='white' />
             </SafeAreaView>
 
-            {/* Search Bar */}
-            <SafeAreaView style={globalStyles.searchContainer} pointerEvents='box-none'>
-                <GooglePlacesAutocomplete
-                    placeholder='Search for a destination...'
-                    fetchDetails={true}
-                    onPress={(data, details = null) => {
-                        Keyboard.dismiss();
-                        if (details) {
-                            setDestination({
-                                latitude: details.geometry.location.lat,
-                                longitude: details.geometry.location.lng,
-                            });
-                        }
-                    }}
-                    onFail={(error) => console.error("Google Places Error:", error)}
-                    keyboardShouldPersistTaps="handled"
-                    query={{
-                        key: GOOGLE_API_KEY,
-                        language: 'en',
-                    }}
-                    styles={{
-                        container: globalStyles.searchContainer2,
-                        textInputContainer: globalStyles.textInputContainer,
-                        textInput: globalStyles.textInput,
-                        listView: globalStyles.listView
-                    }}
-                />
-            </SafeAreaView>
+            {/* Search Bar / Routing Panel */}
+            {!isRoutingMode ? (
+                // Explore Mode
+                <SafeAreaView style={globalStyles.searchContainer} pointerEvents='box-none'>
+                    <GooglePlacesTextInput
+                        apiKey={GOOGLE_API_KEY}
+                        placeHolderText='Search for a destination...'
+                        fetchDetails={true}
+                        onPlaceSelect={(place: any) => {
+                            Keyboard.dismiss();
+                            if (place.details && place.details.location) {
+                                setDestination({
+                                    latitude: place.details.location.latitude,
+                                    longitude: place.details.location.longitude,
+                                });
+                                mapRef.current?.animateToRegion({
+                                    latitude: place.details.location.latitude,
+                                    longitude: place.details.location.longitude,
+                                    latitudeDelta: 0.05,
+                                    longitudeDelta: 0.05,
+                                }, 1000);
+                            }
+                        }}
+                        onError={(error: any) => console.error("Google Places Error:", error)}
+                        detailsFields={['location']}
+                        style={{
+                            container: globalStyles.searchContainer2,
+                            inputContainer: globalStyles.textInputContainer,
+                            input: globalStyles.textInput,
+                            suggestionsContainer: globalStyles.listView
+                        }}
+                    />
+                </SafeAreaView>
+            ) : (
+                // Routing Mode Panel
+                <SafeAreaView style={globalStyles.routingPanelContainer} pointerEvents='box-none'>
+                    <TouchableOpacity 
+                        style={globalStyles.routingCloseButton} 
+                        onPress={() => {
+                            setIsRoutingMode(false);
+                            setDistance(0);
+                            setDuration(0);
+                            setCustomOrigin(null);
+                        }}
+                    >
+                        <Ionicons name="close" size={24} color="black" />
+                    </TouchableOpacity>
+
+                    <GooglePlacesTextInput
+                        apiKey={GOOGLE_API_KEY}
+                        placeHolderText='Your Location (Origin)'
+                        fetchDetails={true}
+                        onPlaceSelect={(place: any) => {
+                            if (place.details && place.details.location) {
+                                setCustomOrigin({
+                                    latitude: place.details.location.latitude,
+                                    longitude: place.details.location.longitude,
+                                });
+                            }
+                        }}
+                        onError={(error: any) => console.error("Google Places Error:", error)}
+                        detailsFields={['location']}
+                        style={{
+                            container: { ...globalStyles.searchContainer2, position: 'relative' },
+                            inputContainer: globalStyles.routingInputContainer,
+                            input: globalStyles.textInput,
+                            suggestionsContainer: globalStyles.listView
+                        }}
+                    />
+
+                    <GooglePlacesTextInput
+                        apiKey={GOOGLE_API_KEY}
+                        placeHolderText='Destination'
+                        fetchDetails={true}
+                        onPlaceSelect={(place: any) => {
+                            if (place.details && place.details.location) {
+                                setDestination({
+                                    latitude: place.details.location.latitude,
+                                    longitude: place.details.location.longitude,
+                                });
+                            }
+                        }}
+                        onError={(error: any) => console.error("Google Places Error:", error)}
+                        detailsFields={['location']}
+                        style={{
+                            container: { ...globalStyles.searchContainer2, position: 'relative' },
+                            inputContainer: globalStyles.routingInputContainer,
+                            input: globalStyles.textInput,
+                            suggestionsContainer: globalStyles.listView
+                        }}
+                    />
+                </SafeAreaView>
+            )}
+
+            {/* Directions Button (Visible in Explore Mode when destination is set) */}
+            {!isRoutingMode && destination && (
+                <TouchableOpacity 
+                    style={globalStyles.directionsButton}
+                    onPress={() => setIsRoutingMode(true)}
+                >
+                    <Ionicons name="navigate-circle" size={24} color="black" />
+                    <Text style={globalStyles.directionsButtonText}>Directions</Text>
+                </TouchableOpacity>
+            )}
+
             {/* Trip Information Card */}
-            {distance > 0 && duration > 0 && (
+            {isRoutingMode && distance > 0 && duration > 0 && (
                 <View style={globalStyles.tripInfoCard}>
                     <Text style={globalStyles.timeText}>
                         {duration >= 60 ? `${Math.floor(duration / 60)} hr ${Math.ceil(duration % 60)} min` : `${Math.ceil(duration)} min`}
