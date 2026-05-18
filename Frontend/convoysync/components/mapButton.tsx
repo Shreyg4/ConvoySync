@@ -8,10 +8,10 @@ export default function MapButton() {
     const router = useRouter();
     const pathname = usePathname();
 
-    if (pathname === '/map' || pathname === '/login' || pathname === '/register' || pathname === '/') return null;
+    if (pathname === '/mapSearch' || pathname === '/mapDirections' || pathname === '/login' || pathname === '/register' || pathname === '/') return null;
 
     return (
-        <HapticPressable style={globalStyles.fab} hapticStyle="light" showVisualFeedback onPress={() => router.push('/map')}>
+        <HapticPressable style={globalStyles.fab} hapticStyle="light" showVisualFeedback onPress={() => router.push('/mapSearch')}>
             <Ionicons name="location" style={globalStyles.label} />
         </HapticPressable>
     );
