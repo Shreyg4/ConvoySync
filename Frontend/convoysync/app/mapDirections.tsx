@@ -104,7 +104,7 @@ const MapDirections = () => {
             </MapView>
 
             {/* Back button */}
-            <SafeAreaView style={{ marginTop: 70, marginLeft: 15 }} pointerEvents="box-none">
+            <SafeAreaView style={{ zIndex: 10, marginLeft: 15 }} pointerEvents="box-none">
                 <BackHeader title="" icon="close-circle" color='black' />
             </SafeAreaView>
 
