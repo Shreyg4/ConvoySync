@@ -1,6 +1,6 @@
 import { Text } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalStyles } from '../../styles';
+import { globalStyles } from '../../styles/globalStyles';
 import { Link } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
 
