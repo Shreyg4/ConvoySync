@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
-import { globalStyles } from '../styles';
+import { mapStyles } from '../../styles/mapStyles';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 const MapSearch = () => {
@@ -71,7 +71,7 @@ const MapSearch = () => {
             </SafeAreaView>
 
             {/* Search Bar */}
-            <SafeAreaView style={globalStyles.searchContainer} pointerEvents='box-none'>
+            <SafeAreaView style={mapStyles.searchContainer} pointerEvents='box-none'>
                 <GooglePlacesTextInput
                     apiKey={GOOGLE_API_KEY}
                     placeHolderText='Search for a destination...'
@@ -94,10 +94,10 @@ const MapSearch = () => {
                     onError={(error: any) => console.error("Google Places Error:", error)}
                     detailsFields={['location']}
                     style={{
-                        container: globalStyles.searchContainer2,
-                        inputContainer: globalStyles.textInputContainer,
-                        input: globalStyles.textInput,
-                        suggestionsContainer: globalStyles.listView
+                        container: mapStyles.searchContainer2,
+                        inputContainer: mapStyles.textInputContainer,
+                        input: mapStyles.textInput,
+                        suggestionsContainer: mapStyles.listView
                     }}
                 />
             </SafeAreaView>
@@ -105,11 +105,11 @@ const MapSearch = () => {
             {/* Directions Button */}
             {destination && (
                 <TouchableOpacity
-                    style={globalStyles.directionsButton}
-                    onPress={() => router.push({ pathname: '/mapDirections', params: { destLat: destination.latitude, destLng: destination.longitude } })}
+                    style={mapStyles.directionsButton}
+                    onPress={() => router.push({ pathname: '/maps/mapDirections', params: { destLat: destination.latitude, destLng: destination.longitude } })}
                 >
                     <Ionicons name="navigate-circle" size={24} color="black" />
-                    <Text style={globalStyles.directionsButtonText}>Directions</Text>
+                    <Text style={mapStyles.directionsButtonText}>Directions</Text>
                 </TouchableOpacity>
             )}
         </View>

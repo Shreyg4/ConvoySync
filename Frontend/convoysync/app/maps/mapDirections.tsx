@@ -7,7 +7,7 @@ import GooglePlacesTextInput from 'react-native-google-places-textinput';
 import { useLocalSearchParams } from 'expo-router';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
-import { globalStyles } from '../styles';
+import { mapStyles } from '../../styles/mapStyles';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 const MapDirections = () => {
@@ -109,7 +109,7 @@ const MapDirections = () => {
             </SafeAreaView>
 
             {/* Routing Mode Panel */}
-            <SafeAreaView style={globalStyles.routingPanelContainer} pointerEvents='box-none'>
+            <SafeAreaView style={mapStyles.routingPanelContainer} pointerEvents='box-none'>
                 <GooglePlacesTextInput
                     apiKey={GOOGLE_API_KEY}
                     placeHolderText='Your Location (Origin)'
@@ -125,10 +125,10 @@ const MapDirections = () => {
                     onError={(error: any) => console.error("Google Places Error:", error)}
                     detailsFields={['location']}
                     style={{
-                        container: { ...globalStyles.searchContainer2, position: 'relative' },
-                        inputContainer: globalStyles.routingInputContainer,
-                        input: globalStyles.textInput,
-                        suggestionsContainer: globalStyles.listView
+                        container: { ...mapStyles.searchContainer2, position: 'relative' },
+                        inputContainer: mapStyles.routingInputContainer,
+                        input: mapStyles.textInput,
+                        suggestionsContainer: mapStyles.listView
                     }}
                 />
 
@@ -147,21 +147,21 @@ const MapDirections = () => {
                     onError={(error: any) => console.error("Google Places Error:", error)}
                     detailsFields={['location']}
                     style={{
-                        container: { ...globalStyles.searchContainer2, position: 'relative' },
-                        inputContainer: globalStyles.routingInputContainer,
-                        input: globalStyles.textInput,
-                        suggestionsContainer: globalStyles.listView
+                        container: { ...mapStyles.searchContainer2, position: 'relative' },
+                        inputContainer: mapStyles.routingInputContainer,
+                        input: mapStyles.textInput,
+                        suggestionsContainer: mapStyles.listView
                     }}
                 />
             </SafeAreaView>
 
             {/* Trip Information Card */}
             {distance > 0 && duration > 0 && (
-                <View style={globalStyles.tripInfoCard}>
-                    <Text style={globalStyles.timeText}>
+                <View style={mapStyles.tripInfoCard}>
+                    <Text style={mapStyles.timeText}>
                         {duration >= 60 ? `${Math.floor(duration / 60)} hr ${Math.ceil(duration % 60)} min` : `${Math.ceil(duration)} min`}
                     </Text>
-                    <Text style={globalStyles.distanceText}>
+                    <Text style={mapStyles.distanceText}>
                         {(distance * 0.621371).toFixed(1)} miles away
                     </Text>
                 </View>
