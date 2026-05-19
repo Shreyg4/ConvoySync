@@ -1,17 +1,17 @@
 import { Text, TextInput, Image, KeyboardAvoidingView, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { globalStyles } from '../styles';
+import { globalStyles } from '../styles/globalStyles';
 import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 
 const Login = () => {
     const { control, handleSubmit } = useForm({
-            defaultValues: {
-                username: '',
-                password: '',
-            },
-        });
+        defaultValues: {
+            username: '',
+            password: '',
+        },
+    });
     const router = useRouter();
 
     const onSubmit = (data: any) => {
@@ -28,20 +28,20 @@ const Login = () => {
                         control={control}
                         name="username"
                         rules={{ required: 'Username is required' }}
-                        render={({ field: {onChange, value}, fieldState: { error } }) => (
-                        <TextInput
-                            style={[globalStyles.input, { marginBottom: 20 }, error && { borderColor: 'red', borderWidth: 1 }]}
-                            placeholder="Enter username"
-                            placeholderTextColor={globalStyles.input.color}
-                            onChangeText={onChange}
-                            value={value}
-                        />
-                    )}/>
+                        render={({ field: { onChange, value }, fieldState: { error } }) => (
+                            <TextInput
+                                style={[globalStyles.input, { marginBottom: 20 }, error && { borderColor: 'red', borderWidth: 1 }]}
+                                placeholder="Enter username"
+                                placeholderTextColor={globalStyles.input.color}
+                                onChangeText={onChange}
+                                value={value}
+                            />
+                        )} />
                     <Controller
                         control={control}
                         name="password"
                         rules={{ required: 'Password is required' }}
-                        render={({ field: {onChange, value}, fieldState: { error } }) => (
+                        render={({ field: { onChange, value }, fieldState: { error } }) => (
                             <TextInput
                                 style={[globalStyles.input, { marginBottom: 20 }, error && { borderColor: 'red', borderWidth: 1 }]}
                                 placeholder="Enter password"
@@ -50,18 +50,18 @@ const Login = () => {
                                 value={value}
                                 secureTextEntry
                             />
-                        )}/>
+                        )} />
                     <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="light" showVisualFeedback>
                         <Text style={globalStyles.SubmitButtonText}>Login</Text>
                     </HapticPressable>
                     <Link href="/register" asChild>
                         <HapticPressable hapticStyle="light" showVisualFeedback>
-                            <Text style={[globalStyles.SubmitButtonText, {color: 'white', marginTop: 40, textAlign: 'center'}]}>{"Don't have an account? Register"}</Text>
+                            <Text style={[globalStyles.SubmitButtonText, { color: 'white', marginTop: 40, textAlign: 'center' }]}>{"Don't have an account? Register"}</Text>
                         </HapticPressable>
                     </Link>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView> 
+        </SafeAreaView>
     )
 }
 

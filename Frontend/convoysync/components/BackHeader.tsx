@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { globalStyles } from '../styles';
+import { globalStyles } from '../styles/globalStyles';
 import { THEME } from '../theme';
 import HapticPressable from './pressableCustomization';
 

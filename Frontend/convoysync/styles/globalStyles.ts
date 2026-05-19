@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { THEME } from './theme';
+import { THEME } from '../theme';
 
 export const globalStyles = StyleSheet.create({
   container: {
@@ -37,7 +37,11 @@ export const globalStyles = StyleSheet.create({
     borderRadius: THEME.BORDER_RADIUS.xl,
     marginTop: THEME.SPACING.lg,
     alignItems: 'center',
-    boxShadow: '0 0 15px 5px #0c4131',
+    shadowColor: '#0c4131',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 10,
   },
   SubmitButtonText: {
     color: THEME.COLOR.black,
@@ -106,10 +110,5 @@ export const globalStyles = StyleSheet.create({
     fontSize: THEME.FONT_SIZE.xxl,
     color: "#000",
     fontWeight: "700",
-  },
-  mapContainer: {
-    position: 'absolute',
-    zIndex: 1,
-    left: 15,
   },
 });
