@@ -1,17 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, StyleSheet, Text } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import GooglePlacesTextInput from 'react-native-google-places-textinput';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '@/components/BackHeader';
+import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
+import { THEME } from '../../theme';
+import { consumeSelectedMapPlace } from './mapSearchSelectionStore';
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 const MapDirections = () => {
     const params = useLocalSearchParams();
+    const router = useRouter();
     const mapRef = useRef<MapView>(null);
     const [origin, setOrigin] = useState<any>(null);
     const [destination, setDestination] = useState<any>(
@@ -19,12 +23,59 @@ const MapDirections = () => {
             ? { latitude: Number(params.destLat), longitude: Number(params.destLng) }
             : null
     );
+    const [originLabel, setOriginLabel] = useState('Your Location');
+    const [destinationLabel, setDestinationLabel] = useState('Destination');
     const [locationGranted, setLocationGranted] = useState(false);
     const [distance, setDistance] = useState<number>(0);
     const [duration, setDuration] = useState<number>(0);
     const [customOrigin, setCustomOrigin] = useState<any>(null);
+    const [selectionTarget, setSelectionTarget] = useState<'origin' | 'destination' | null>(null);
 
     const activeOrigin = customOrigin || origin;
+
+    useFocusEffect(
+        useCallback(() => {
+        const selectedPlace = consumeSelectedMapPlace();
+        if (!selectedPlace || !selectionTarget) {
+                return;
+        }
+
+        const nextLabel = selectedPlace.description || '';
+
+        if (selectionTarget === 'origin') {
+            setCustomOrigin({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+            });
+            setOriginLabel(nextLabel || 'Your Location');
+        }
+
+        if (selectionTarget === 'destination') {
+            setDestination({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+            });
+            setDestinationLabel(nextLabel || 'Destination');
+        }
+
+        setSelectionTarget(null);
+        }, [selectionTarget])
+    );
+
+    const openSearchScreen = useCallback((target: 'origin' | 'destination') => {
+        setSelectionTarget(target);
+            const paramsObj: any = {
+                placeholder: target === 'origin' ? 'Your Location (Origin)' : 'Destination',
+            };
+
+            // Only prefill currentText for origin; destination should show placeholder only
+            if (target === 'origin') paramsObj.currentText = originLabel;
+
+            router.push({
+                pathname: '/maps/mapSearchScreen' as any,
+                params: paramsObj,
+            });
+    }, [destinationLabel, originLabel, router]);
 
     //Requst permission and show current location
     useEffect(() => {
@@ -103,56 +154,39 @@ const MapDirections = () => {
                 )}
             </MapView>
 
-            {/* Back button */}
-            <SafeAreaView style={{ zIndex: 10, marginLeft: 15 }} pointerEvents="box-none">
-                <BackHeader title="" icon="close-circle" color='black' />
-            </SafeAreaView>
-
             {/* Routing Mode Panel */}
             <SafeAreaView style={mapStyles.routingPanelContainer} pointerEvents='box-none'>
-                <GooglePlacesTextInput
-                    apiKey={GOOGLE_API_KEY}
-                    placeHolderText='Your Location (Origin)'
-                    fetchDetails={true}
-                    onPlaceSelect={(place: any) => {
-                        if (place.details && place.details.location) {
-                            setCustomOrigin({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                            });
-                        }
-                    }}
-                    onError={(error: any) => console.error("Google Places Error:", error)}
-                    detailsFields={['location']}
-                    style={{
-                        container: { ...mapStyles.searchContainer2, position: 'relative' },
-                        inputContainer: mapStyles.routingInputContainer,
-                        input: mapStyles.textInput,
-                        suggestionsContainer: mapStyles.listView
-                    }}
-                />
+                {/* Back button */}
+                <View style={mapStyles.backButtonContainer}>
+                    <BackHeader
+                        title=""
+                        icon={destination ? 'close' : 'chevron-back'}
+                        color={THEME.COLOR.mint}
+                    />
+                </View>
+                <HapticPressable
+                    hapticStyle="light"
+                    onPress={() => openSearchScreen('origin')}
+                    style={{ marginHorizontal: 15, marginTop: 10 }}
+                >
+                    <View style={mapStyles.routingInputContainer}>
+                        <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2, { color: THEME.COLOR.white }]}>
+                            {originLabel}
+                        </Text>
+                    </View>
+                </HapticPressable>
 
-                <GooglePlacesTextInput
-                    apiKey={GOOGLE_API_KEY}
-                    placeHolderText='Destination'
-                    fetchDetails={true}
-                    onPlaceSelect={(place: any) => {
-                        if (place.details && place.details.location) {
-                            setDestination({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                            });
-                        }
-                    }}
-                    onError={(error: any) => console.error("Google Places Error:", error)}
-                    detailsFields={['location']}
-                    style={{
-                        container: { ...mapStyles.searchContainer2, position: 'relative' },
-                        inputContainer: mapStyles.routingInputContainer,
-                        input: mapStyles.textInput,
-                        suggestionsContainer: mapStyles.listView
-                    }}
-                />
+                <HapticPressable
+                    hapticStyle="light"
+                    onPress={() => openSearchScreen('destination')}
+                    style={{ marginHorizontal: 15, marginTop: 10 }}
+                >
+                    <View style={mapStyles.routingInputContainer}>
+                        <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2]}>
+                            {destinationLabel}
+                        </Text>
+                    </View>
+                </HapticPressable>
             </SafeAreaView>
 
             {/* Trip Information Card */}

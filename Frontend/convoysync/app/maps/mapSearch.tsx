@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -159,7 +159,7 @@ const MapSearch = () => {
                                 mapStyles.textInput,
                                 mapStyles.searchTextInset,
                                 {
-                                    top: 16,
+                                    top: Platform.select({ ios: 16, android: 14 }),
                                     maxWidth: '88%',
                                     color: searchText ? THEME.COLOR.white : THEME.COLOR.neutral400,
                                 },

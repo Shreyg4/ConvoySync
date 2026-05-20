@@ -78,11 +78,11 @@ export const mapStyles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     textInput2: {
+        top: 16,
         height: 50,
         color: THEME.COLOR.white,
         fontSize: 16,
         backgroundColor: 'transparent',
-        flex: 1,
         width: '100%',
     },
     searchTextInset: {
