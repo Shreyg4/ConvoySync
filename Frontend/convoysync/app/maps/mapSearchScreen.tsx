@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View } from 'react-native';
+import { View, Platform, Text } from 'react-native';
 import GooglePlacesTextInput, { type GooglePlacesTextInputRef } from 'react-native-google-places-textinput';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import BackHeader from '@/components/BackHeader';
+import HapticPressable from '@/components/pressableCustomization';
+import * as Location from 'expo-location';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
 import { setSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
@@ -50,6 +52,10 @@ const MapSearchScreen = () => {
     const params = useLocalSearchParams<{ placeholder?: string; currentText?: string | string[] }>();
     const searchRef = useRef<GooglePlacesTextInputRef>(null);
     const initialText = Array.isArray(params.currentText) ? params.currentText[0] || '' : params.currentText || '';
+    const showUseMyLocation = params.placeholder?.includes('Origin') || params.placeholder === 'Your Location';
+    const suggestionsContainerStyle = showUseMyLocation
+        ? [mapStyles.listViewFocused, { marginTop: 50 }]
+        : mapStyles.listViewFocused;
 
     useEffect(() => {
         const focusTimeout = setTimeout(() => {
@@ -74,7 +80,7 @@ const MapSearchScreen = () => {
                 <GooglePlacesTextInput
                     ref={searchRef}
                     apiKey={GOOGLE_API_KEY}
-                    value={initialText}
+                    defaultValue={initialText}
                     placeHolderText={params.placeholder || 'Search for a destination...'}
                     fetchDetails={true}
                     showClearButton={true}
@@ -98,7 +104,7 @@ const MapSearchScreen = () => {
                         container: mapStyles.searchContainer2Focused,
                         inputContainer: mapStyles.textInputContainer,
                         input: [mapStyles.textInput, mapStyles.searchScreenTextInset],
-                        suggestionsContainer: mapStyles.listViewFocused,
+                        suggestionsContainer: suggestionsContainerStyle,
                         placeholder: { color: THEME.COLOR.neutral400 },
                         suggestionText: {
                             main: { color: THEME.COLOR.white },
@@ -106,6 +112,40 @@ const MapSearchScreen = () => {
                         },
                     }}
                 />
+                {showUseMyLocation && (
+                    <View style={{ position: 'absolute', top: Platform.select({ ios: 120, android: 100 }), left: 0, right: 0, alignItems: 'center', zIndex: 20 }}>
+                        <HapticPressable
+                            hapticStyle="light"
+                            onPress={async () => {
+                                try {
+                                    let { status } = await Location.requestForegroundPermissionsAsync();
+                                    if (status !== 'granted') {
+                                        console.log('Permission to access location was denied');
+                                        return;
+                                    }
+
+                                    let location = await Location.getCurrentPositionAsync({});
+                                    const currentLoc = {
+                                        latitude: location.coords.latitude,
+                                        longitude: location.coords.longitude,
+                                    };
+
+                                    setSelectedMapPlace({
+                                        latitude: currentLoc.latitude,
+                                        longitude: currentLoc.longitude,
+                                        description: 'Your Location',
+                                    });
+                                    router.back();
+                                } catch (e) {
+                                    console.log('Error fetching location', e);
+                                }
+                            }}
+                            style={mapStyles.useLocationButton}
+                        >
+                            <Text style={{ color: THEME.COLOR.black, fontWeight: '600' }}>Use my location</Text>
+                        </HapticPressable>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );

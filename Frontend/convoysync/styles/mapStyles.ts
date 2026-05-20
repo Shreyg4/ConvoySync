@@ -68,6 +68,8 @@ export const mapStyles = StyleSheet.create({
         paddingHorizontal: 15,
         marginHorizontal: 15,
         marginTop: 65,
+        borderColor: THEME.COLOR.mint,
+        borderWidth: 1,
         elevation: 5,
     },
     textInput: {
@@ -80,7 +82,7 @@ export const mapStyles = StyleSheet.create({
     textInput2: {
         top: 16,
         height: 50,
-        color: THEME.COLOR.white,
+        color: THEME.COLOR.neutral400,
         fontSize: 16,
         backgroundColor: 'transparent',
         width: '100%',
@@ -110,7 +112,6 @@ export const mapStyles = StyleSheet.create({
         flex: 1,
         maxHeight: Dimensions.get('window').height,
         marginHorizontal: 15,
-        marginTop: 8,
         elevation: 5,
     },
     tripInfoCard: {
@@ -142,7 +143,7 @@ export const mapStyles = StyleSheet.create({
     backButtonContainer2: {
         position: "absolute",
         top: Platform.select({
-            ios: 70,
+            ios: 68,
             android: 60,
         }),
         left: Platform.select({
@@ -158,35 +159,34 @@ export const mapStyles = StyleSheet.create({
     },
     routingPanelContainer: {
         position: 'absolute',
-        top: 0,
         width: '100%',
         zIndex: 2,
         backgroundColor: THEME.COLOR.black,
-        paddingBottom: 20,
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
-        shadowRadius: 5,
+        paddingBottom: 50,
     },
     routingInputContainer: {
         borderRadius: 25,
-        marginLeft: 60,
+        marginLeft: 40,
         paddingHorizontal: 15,
         marginHorizontal: 15,
-        marginTop: 10,
         backgroundColor: THEME.COLOR.black,
         borderWidth: 1,
-        borderColor: THEME.COLOR.neutral500,
+        borderColor: THEME.COLOR.mint,
+    },
+    useLocationButton: {
+        marginTop: Platform.select({ ios: 10, android: 30 }),
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 18,
+        backgroundColor: THEME.COLOR.mint,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     listViewDirections: {
         backgroundColor: THEME.COLOR.black,
         flex: 1,
         maxHeight: Dimensions.get('window').height,
         marginHorizontal: 15,
-        marginTop: 8,
         elevation: 5,
     },
     routingCloseButton: {

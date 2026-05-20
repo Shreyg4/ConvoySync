@@ -24,7 +24,7 @@ const MapDirections = () => {
             : null
     );
     const [originLabel, setOriginLabel] = useState('Your Location');
-    const [destinationLabel, setDestinationLabel] = useState('Destination');
+    const [destinationLabel, setDestinationLabel] = useState('Choose destination');
     const [locationGranted, setLocationGranted] = useState(false);
     const [distance, setDistance] = useState<number>(0);
     const [duration, setDuration] = useState<number>(0);
@@ -65,11 +65,11 @@ const MapDirections = () => {
     const openSearchScreen = useCallback((target: 'origin' | 'destination') => {
         setSelectionTarget(target);
             const paramsObj: any = {
-                placeholder: target === 'origin' ? 'Your Location (Origin)' : 'Destination',
+                placeholder: target === 'origin' ? 'Your Location' : 'Choose destination',
             };
 
-            // Only prefill currentText for origin; destination should show placeholder only
-            if (target === 'origin') paramsObj.currentText = originLabel;
+            // Don't prefill the search input with the literal 'Your Location'
+            if (target === 'origin' && originLabel !== 'Your Location') paramsObj.currentText = originLabel;
 
             router.push({
                 pathname: '/maps/mapSearchScreen' as any,
@@ -77,7 +77,6 @@ const MapDirections = () => {
             });
     }, [destinationLabel, originLabel, router]);
 
-    //Requst permission and show current location
     useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -157,7 +156,7 @@ const MapDirections = () => {
             {/* Routing Mode Panel */}
             <SafeAreaView style={mapStyles.routingPanelContainer} pointerEvents='box-none'>
                 {/* Back button */}
-                <View style={mapStyles.backButtonContainer}>
+                <View style={mapStyles.backButtonContainer2}>
                     <BackHeader
                         title=""
                         icon={destination ? 'close' : 'chevron-back'}
@@ -170,7 +169,7 @@ const MapDirections = () => {
                     style={{ marginHorizontal: 15, marginTop: 10 }}
                 >
                     <View style={mapStyles.routingInputContainer}>
-                        <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2, { color: THEME.COLOR.white }]}>
+                        <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2, { color: THEME.COLOR.white }]}> 
                             {originLabel}
                         </Text>
                     </View>
@@ -182,7 +181,11 @@ const MapDirections = () => {
                     style={{ marginHorizontal: 15, marginTop: 10 }}
                 >
                     <View style={mapStyles.routingInputContainer}>
-                        <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2]}>
+                        <Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={[mapStyles.textInput2, { color: destination ? THEME.COLOR.white : THEME.COLOR.neutral400 }]}
+                        >
                             {destinationLabel}
                         </Text>
                     </View>
