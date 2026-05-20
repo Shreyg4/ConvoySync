@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Dimensions } from "react-native";
+import { Dimensions, Platform, StyleSheet } from "react-native";
 import { THEME } from "../theme";
 
 export const mapStyles = StyleSheet.create({
@@ -50,7 +50,7 @@ export const mapStyles = StyleSheet.create({
     },
     backButtonContainer: {
         position: "absolute",
-        top: 66,
+        top: 65,
         left: Platform.select({
             ios: 25,
             android: 20,
@@ -76,6 +76,20 @@ export const mapStyles = StyleSheet.create({
         color: THEME.COLOR.white,
         fontSize: 16,
         backgroundColor: 'transparent',
+    },
+    textInput2: {
+        height: 50,
+        color: THEME.COLOR.white,
+        fontSize: 16,
+        backgroundColor: 'transparent',
+        flex: 1,
+        width: '100%',
+    },
+    searchTextInset: {
+        paddingRight: 24,
+    },
+    searchScreenTextInset: {
+        paddingRight: 56,
     },
     searchClearButton: {
         position: 'absolute',
@@ -125,13 +139,29 @@ export const mapStyles = StyleSheet.create({
         fontWeight: '600',
         marginTop: 2,
     },
+    backButtonContainer2: {
+        position: "absolute",
+        top: Platform.select({
+            ios: 70,
+            android: 60,
+        }),
+        left: Platform.select({
+            ios: 10,
+            android: 5,
+        }),
+        width: 50,
+        height: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 3,
+        elevation: 8,
+    },
     routingPanelContainer: {
         position: 'absolute',
         top: 0,
-        paddingTop: 60,
         width: '100%',
         zIndex: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: THEME.COLOR.black,
         paddingBottom: 20,
         borderBottomLeftRadius: 20,
         borderBottomRightRadius: 20,
@@ -143,10 +173,21 @@ export const mapStyles = StyleSheet.create({
     },
     routingInputContainer: {
         borderRadius: 25,
+        marginLeft: 60,
         paddingHorizontal: 15,
         marginHorizontal: 15,
         marginTop: 10,
-        backgroundColor: '#f3f4f6',
+        backgroundColor: THEME.COLOR.black,
+        borderWidth: 1,
+        borderColor: THEME.COLOR.neutral500,
+    },
+    listViewDirections: {
+        backgroundColor: THEME.COLOR.black,
+        flex: 1,
+        maxHeight: Dimensions.get('window').height,
+        marginHorizontal: 15,
+        marginTop: 8,
+        elevation: 5,
     },
     routingCloseButton: {
         position: 'absolute',

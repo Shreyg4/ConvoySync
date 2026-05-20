@@ -1,38 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Keyboard, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
-import GooglePlacesTextInput, { type GooglePlacesTextInputRef } from 'react-native-google-places-textinput';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
-
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+import { consumeSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
 
 const MapSearch = () => {
     const router = useRouter();
     const mapRef = useRef<MapView>(null);
-    const searchRef = useRef<GooglePlacesTextInputRef>(null);
     const [origin, setOrigin] = useState<any>(null);
     const [destination, setDestination] = useState<any>(null);
     const [locationGranted, setLocationGranted] = useState(false);
-    const [isSearching, setIsSearching] = useState(false);
     const [searchText, setSearchText] = useState('');
 
-    const cancelSearch = () => {
-        searchRef.current?.clear();
-        searchRef.current?.blur();
-        Keyboard.dismiss();
-        setSearchText('');
-        setIsSearching(false);
-    };
-
     const clearSearch = () => {
-        searchRef.current?.clear();
         setSearchText('');
         setDestination(null);
         if (origin) {
@@ -43,6 +31,27 @@ const MapSearch = () => {
             }, 800);
         }
     };
+
+    useFocusEffect(
+        useCallback(() => {
+            const selectedPlace = consumeSelectedMapPlace();
+            if (!selectedPlace) {
+                return;
+            }
+
+            setSearchText(selectedPlace.description || '');
+            setDestination({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+            });
+            mapRef.current?.animateToRegion({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            }, 1000);
+        }, [])
+    );
 
     //Request permission and show current location
     useEffect(() => {
@@ -113,64 +122,53 @@ const MapSearch = () => {
 
             {/* Search Bar */}
             <SafeAreaView
-                style={[
-                    mapStyles.searchContainer,
-                    isSearching && { bottom: 0, backgroundColor: THEME.COLOR.black }
-                ]}
+                style={mapStyles.searchContainer}
                 pointerEvents='box-none'
             >
                 {/* Back / Cancel / Clear button */}
                 <View style={mapStyles.backButtonContainer}>
                     <BackHeader
                         title=""
-                        icon={(isSearching || !!destination) ? 'close' : 'chevron-back'}
+                        icon={destination ? 'close' : 'chevron-back'}
                         color={THEME.COLOR.mint}
                         onPress={
-                            isSearching ? cancelSearch :
-                                destination ? clearSearch :
-                                    () => router.back()
+                            destination ? clearSearch :
+                                () => router.back()
                         }
                     />
                 </View>
 
-                <GooglePlacesTextInput
-                    ref={searchRef}
-                    apiKey={GOOGLE_API_KEY}
-                    placeHolderText='Search for a destination...'
-                    fetchDetails={true}
-                    showClearButton={false}
-                    onFocus={() => setIsSearching(true)}
-                    onTextChange={(text) => setSearchText(text)}
-                    onPlaceSelect={(place: any) => {
-                        Keyboard.dismiss();
-                        setIsSearching(false);
-                        if (place.details && place.details.location) {
-                            setDestination({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                            });
-                            mapRef.current?.animateToRegion({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                                latitudeDelta: 0.05,
-                                longitudeDelta: 0.05,
-                            }, 1000);
-                        }
+                <HapticPressable
+                    hapticStyle='light'
+                    onPress={() => {
+                        router.push({
+                            pathname: '/maps/mapSearchScreen' as any,
+                            params: {
+                                placeholder: 'Search for a destination...',
+                                currentText: searchText,
+                            },
+                        });
                     }}
-                    onError={(error: any) => console.error("Google Places Error:", error)}
-                    detailsFields={['location']}
-                    style={{
-                        container: isSearching ? mapStyles.searchContainer2Focused : mapStyles.searchContainer2,
-                        inputContainer: mapStyles.textInputContainer,
-                        input: mapStyles.textInput,
-                        suggestionsContainer: isSearching ? mapStyles.listViewFocused : mapStyles.listView,
-                        placeholder: { color: THEME.COLOR.neutral400 },
-                        suggestionText: {
-                            main: { color: THEME.COLOR.white },
-                            secondary: { color: THEME.COLOR.neutral400 },
-                        }
-                    }}
-                />
+                    style={mapStyles.searchContainer2}
+                >
+                    <View style={mapStyles.textInputContainer}>
+                        <Text
+                            numberOfLines={1}
+                            ellipsizeMode='tail'
+                            style={[
+                                mapStyles.textInput,
+                                mapStyles.searchTextInset,
+                                {
+                                    top: 16,
+                                    maxWidth: '88%',
+                                    color: searchText ? THEME.COLOR.white : THEME.COLOR.neutral400,
+                                },
+                            ]}
+                        >
+                            {searchText || 'Search for a destination...'}
+                        </Text>
+                    </View>
+                </HapticPressable>
             </SafeAreaView>
 
             {/* Directions Button — always visible */}
