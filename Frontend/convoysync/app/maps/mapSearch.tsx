@@ -177,7 +177,14 @@ const MapSearch = () => {
                 hapticStyle="medium"
                 onPress={() => {
                     if (destination) {
-                        router.push({ pathname: '/maps/mapDirections', params: { destLat: destination.latitude, destLng: destination.longitude } });
+                        router.push({
+                            pathname: '/maps/mapDirections',
+                            params: {
+                                destLat: destination.latitude,
+                                destLng: destination.longitude,
+                                destLabel: searchText,
+                            },
+                        });
                     } else {
                         router.push({ pathname: '/maps/mapDirections' });
                     }
