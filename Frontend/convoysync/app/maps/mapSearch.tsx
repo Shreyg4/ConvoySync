@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, StyleSheet, Keyboard, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
-import GooglePlacesTextInput from 'react-native-google-places-textinput';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
+import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+import { THEME } from '../../theme';
+import { consumeSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
 
 const MapSearch = () => {
     const router = useRouter();
@@ -16,8 +18,42 @@ const MapSearch = () => {
     const [origin, setOrigin] = useState<any>(null);
     const [destination, setDestination] = useState<any>(null);
     const [locationGranted, setLocationGranted] = useState(false);
+    const [searchText, setSearchText] = useState('');
 
-    //Requst permission and show current location
+    const clearSearch = () => {
+        setSearchText('');
+        setDestination(null);
+        if (origin) {
+            mapRef.current?.animateToRegion({
+                ...origin,
+                latitudeDelta: 0.09,
+                longitudeDelta: 0.04,
+            }, 800);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            const selectedPlace = consumeSelectedMapPlace();
+            if (!selectedPlace) {
+                return;
+            }
+
+            setSearchText(selectedPlace.description || '');
+            setDestination({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+            });
+            mapRef.current?.animateToRegion({
+                latitude: selectedPlace.latitude,
+                longitude: selectedPlace.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            }, 1000);
+        }, [])
+    );
+
+    //Request permission and show current location
     useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -52,7 +88,7 @@ const MapSearch = () => {
                 mapType="satellite"
                 style={StyleSheet.absoluteFillObject}
                 showsUserLocation={locationGranted}
-                showsMyLocationButton={true}
+                showsMyLocationButton={false}
                 followsUserLocation={true}
             >
                 {/* Marker for searched destination */}
@@ -65,53 +101,97 @@ const MapSearch = () => {
                 )}
             </MapView>
 
-            {/* Back button */}
-            <SafeAreaView style={{ marginTop: 70, marginLeft: 15 }} pointerEvents="box-none">
-                <BackHeader title="" icon="close-circle" color='black' />
-            </SafeAreaView>
-
-            {/* Search Bar */}
-            <SafeAreaView style={mapStyles.searchContainer} pointerEvents='box-none'>
-                <GooglePlacesTextInput
-                    apiKey={GOOGLE_API_KEY}
-                    placeHolderText='Search for a destination...'
-                    fetchDetails={true}
-                    onPlaceSelect={(place: any) => {
-                        Keyboard.dismiss();
-                        if (place.details && place.details.location) {
-                            setDestination({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                            });
+            {/* Return to current location button */}
+            {locationGranted && (
+                <HapticPressable
+                    style={mapStyles.locationButton}
+                    hapticStyle="light"
+                    onPress={() => {
+                        if (origin) {
                             mapRef.current?.animateToRegion({
-                                latitude: place.details.location.latitude,
-                                longitude: place.details.location.longitude,
-                                latitudeDelta: 0.05,
-                                longitudeDelta: 0.05,
-                            }, 1000);
+                                ...origin,
+                                latitudeDelta: 0.09,
+                                longitudeDelta: 0.04,
+                            }, 800);
                         }
                     }}
-                    onError={(error: any) => console.error("Google Places Error:", error)}
-                    detailsFields={['location']}
-                    style={{
-                        container: mapStyles.searchContainer2,
-                        inputContainer: mapStyles.textInputContainer,
-                        input: mapStyles.textInput,
-                        suggestionsContainer: mapStyles.listView
+                >
+                    <Ionicons name="locate" size={22} color={THEME.COLOR.mint} />
+                </HapticPressable>
+            )}
+
+            {/* Search Bar */}
+            <SafeAreaView
+                style={mapStyles.searchContainer}
+                pointerEvents='box-none'
+            >
+                {/* Back / Cancel / Clear button */}
+                <View style={mapStyles.backButtonContainer}>
+                    <BackHeader
+                        title=""
+                        icon={destination ? 'close' : 'chevron-back'}
+                        color={THEME.COLOR.mint}
+                        onPress={
+                            destination ? clearSearch :
+                                () => router.back()
+                        }
+                    />
+                </View>
+
+                <HapticPressable
+                    hapticStyle='light'
+                    onPress={() => {
+                        router.push({
+                            pathname: '/maps/mapSearchScreen' as any,
+                            params: {
+                                placeholder: 'Search for a destination...',
+                                currentText: searchText,
+                            },
+                        });
                     }}
-                />
+                    style={mapStyles.searchContainer2}
+                >
+                    <View style={mapStyles.textInputContainer}>
+                        <Text
+                            numberOfLines={1}
+                            ellipsizeMode='tail'
+                            style={[
+                                mapStyles.textInput,
+                                mapStyles.searchTextInset,
+                                {
+                                    top: Platform.select({ ios: 16, android: 14 }),
+                                    maxWidth: '88%',
+                                    color: searchText ? THEME.COLOR.white : THEME.COLOR.neutral400,
+                                },
+                            ]}
+                        >
+                            {searchText || 'Search for a destination...'}
+                        </Text>
+                    </View>
+                </HapticPressable>
             </SafeAreaView>
 
-            {/* Directions Button */}
-            {destination && (
-                <TouchableOpacity
-                    style={mapStyles.directionsButton}
-                    onPress={() => router.push({ pathname: '/maps/mapDirections', params: { destLat: destination.latitude, destLng: destination.longitude } })}
-                >
-                    <Ionicons name="navigate-circle" size={24} color="black" />
-                    <Text style={mapStyles.directionsButtonText}>Directions</Text>
-                </TouchableOpacity>
-            )}
+            {/* Directions Button — always visible */}
+            <HapticPressable
+                style={mapStyles.directionsButton}
+                hapticStyle="medium"
+                onPress={() => {
+                    if (destination) {
+                        router.push({
+                            pathname: '/maps/mapDirections',
+                            params: {
+                                destLat: destination.latitude,
+                                destLng: destination.longitude,
+                                destLabel: searchText,
+                            },
+                        });
+                    } else {
+                        router.push({ pathname: '/maps/mapDirections' });
+                    }
+                }}
+            >
+                <Ionicons name="navigate-circle" size={28} color={THEME.COLOR.black} />
+            </HapticPressable>
         </View>
     )
 }
