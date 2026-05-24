@@ -174,6 +174,16 @@ const MapDirections = () => {
                         color={THEME.COLOR.mint}
                         onPress={() => router.replace(backRoute)}
                     />
+                    {routeDestination && (
+                        <HapticPressable
+                            hapticStyle="medium"
+                            onPress={() => router.replace('/maps/mapNavigation')}
+                            style={styles.navigateButton}
+                        >
+                            <Ionicons name="navigate" size={14} color={THEME.COLOR.black} />
+                            <Text style={styles.navigateButtonText}>Navigate</Text>
+                        </HapticPressable>
+                    )}
                 </View>
 
                 {!routeDestination && (
@@ -272,6 +282,24 @@ const styles = StyleSheet.create({
     headerRow: {
         marginTop: 8,
         marginLeft: 10,
+        marginRight: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    navigateButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 20,
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+    },
+    navigateButtonText: {
+        color: THEME.COLOR.black,
+        fontSize: 14,
+        fontWeight: '700',
     },
     emptyCard: {
         marginTop: 120,
