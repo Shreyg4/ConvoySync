@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +34,8 @@ const getManeuverIcon = (maneuver?: string) => {
 
 const MapDirections = () => {
     const router = useRouter();
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const backRoute = from === 'plannerSuggest' ? '/maps/plannerSuggest' : '/maps/planner';
     const mapRef = useRef<MapView>(null);
     const [origin, setOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [locationGranted, setLocationGranted] = useState(false);
@@ -170,7 +172,7 @@ const MapDirections = () => {
                         title=""
                         icon="chevron-back"
                         color={THEME.COLOR.mint}
-                        onPress={() => router.replace('/maps/planner')}
+                        onPress={() => router.replace(backRoute)}
                     />
                 </View>
 

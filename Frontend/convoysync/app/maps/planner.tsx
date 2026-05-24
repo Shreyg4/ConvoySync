@@ -13,9 +13,20 @@ import {
     type RouteSelectionTarget,
     type RouteStop,
     getTripPlannerDraft,
-    resetTripPlannerDraft,
     setTripPlannerDraft,
 } from './tripPlannerStore';
+import {
+    type Suggestion,
+    getSuggestions,
+    deleteSuggestion,
+    getUserSuggestionCount,
+    subscribeSuggestions,
+    MAX_USER_SUGGESTIONS,
+    CURRENT_USER,
+} from './suggestionStore';
+
+// Replace with real role from auth/trip context once backend is wired up
+const IS_PARTY_LEADER = false;
 
 const STOP_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
 const MAX_STOPS = 5;
@@ -31,6 +42,11 @@ const Planner = () => {
     const [stops, setStops] = useState<RouteStop[]>([]);
     const [selectionTarget, setSelectionTarget] = useState<RouteSelectionTarget | null>(null);
     const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
+    const [suggestions, setSuggestions] = useState<Suggestion[]>(getSuggestions());
+
+    useEffect(() => {
+        return subscribeSuggestions(() => setSuggestions(getSuggestions()));
+    }, []);
 
     useEffect(() => {
         const draft = getTripPlannerDraft();
@@ -164,16 +180,6 @@ const Planner = () => {
         );
     }, []);
 
-    const clearRoute = useCallback(() => {
-        resetTripPlannerDraft();
-        setOriginLabel('Your Location');
-        setCustomOrigin(null);
-        setDestinationLabel('Choose destination');
-        setDestination(null);
-        setStops([]);
-        setSelectionTarget(null);
-    }, []);
-
     const hasRoute = Boolean(destination);
     const activeStops = stops.filter((stop) => stop.latitude !== 0 || stop.longitude !== 0);
     const addStopDisabled = !destination || (destination ? 1 : 0) + stops.length >= MAX_STOPS;
@@ -184,9 +190,8 @@ const Planner = () => {
                 <View style={mapStyles.plannerHeader}>
                     <BackHeader
                         title="Planner"
-                        icon={hasRoute ? 'close' : 'chevron-back'}
+                        icon="chevron-back"
                         color={THEME.COLOR.mint}
-                        onPress={hasRoute ? clearRoute : undefined}
                     />
                 </View>
 
@@ -302,6 +307,21 @@ const Planner = () => {
                     </View>
                 </View>
 
+                <View style={styles.saveTripRow}>
+                    <HapticPressable
+                        hapticStyle="medium"
+                        disabled={!hasRoute}
+                        onPress={() => {}}
+                        style={styles.saveTripPressable}
+                    >
+                        <View style={[styles.saveTripButton, !hasRoute && styles.saveTripButtonDisabled]}>
+                            <Text style={[styles.saveTripButtonText, !hasRoute && styles.saveTripButtonTextDisabled]}>
+                                Save Trip
+                            </Text>
+                        </View>
+                    </HapticPressable>
+                </View>
+
                 <View style={mapStyles.suggestionsContainer}>
                     <HapticPressable
                         hapticStyle="light"
@@ -319,7 +339,55 @@ const Planner = () => {
 
                     {suggestionsExpanded && (
                         <View style={mapStyles.suggestionsBody}>
-                            <Text style={mapStyles.suggestionsEmptyText}>No suggestions yet</Text>
+                            {suggestions.length === 0 ? (
+                                <Text style={mapStyles.suggestionsEmptyText}>No suggestions yet</Text>
+                            ) : (
+                                suggestions.map((s) => (
+                                    <View key={s.id} style={styles.suggestionItem}>
+                                        <Ionicons
+                                            name="location"
+                                            size={18}
+                                            color={s.userId === CURRENT_USER.id ? THEME.COLOR.mint : '#3b82f6'}
+                                        />
+                                        <View style={styles.suggestionInfo}>
+                                            <Text style={styles.suggestionLabel} numberOfLines={1}>{s.label}</Text>
+                                            <Text style={styles.suggestionUser}>
+                                                {s.userId === CURRENT_USER.id ? 'You' : s.userName}
+                                            </Text>
+                                        </View>
+                                        {(s.userId === CURRENT_USER.id || IS_PARTY_LEADER) && (
+                                            <HapticPressable
+                                                hapticStyle="light"
+                                                onPress={() => deleteSuggestion(s.id, CURRENT_USER.id, IS_PARTY_LEADER)}
+                                            >
+                                                <Ionicons name="trash-outline" size={18} color={THEME.COLOR.neutral500} />
+                                            </HapticPressable>
+                                        )}
+                                    </View>
+                                ))
+                            )}
+                            {!IS_PARTY_LEADER && (
+                                <HapticPressable
+                                    hapticStyle="light"
+                                    onPress={() => router.push('/maps/mapSuggest')}
+                                    disabled={getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS}
+                                    style={styles.suggestLocationButton}
+                                >
+                                    <Ionicons name="add-circle-outline" size={18} color={
+                                        getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS
+                                            ? THEME.COLOR.neutral500
+                                            : THEME.COLOR.mint
+                                    } />
+                                    <Text style={[
+                                        styles.suggestLocationText,
+                                        getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS && styles.suggestLocationTextDisabled,
+                                    ]}>
+                                        {getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS
+                                            ? 'Max 3 suggestions reached'
+                                            : 'Suggest a location'}
+                                    </Text>
+                                </HapticPressable>
+                            )}
                         </View>
                     )}
                 </View>
@@ -412,6 +480,65 @@ const styles = StyleSheet.create({
         borderColor: THEME.COLOR.neutral500,
     },
     addStopButtonTextDisabled: {
+        color: THEME.COLOR.neutral500,
+    },
+    suggestionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(118, 224, 187, 0.1)',
+    },
+    suggestionInfo: {
+        flex: 1,
+    },
+    suggestionLabel: {
+        color: THEME.COLOR.white,
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    suggestionUser: {
+        color: THEME.COLOR.neutral500,
+        fontSize: 11,
+        marginTop: 2,
+    },
+    suggestLocationButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 12,
+    },
+    suggestLocationText: {
+        color: THEME.COLOR.mint,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    suggestLocationTextDisabled: {
+        color: THEME.COLOR.neutral500,
+    },
+    saveTripRow: {
+        marginHorizontal: 15,
+        marginBottom: 10,
+    },
+    saveTripPressable: {},
+    saveTripButton: {
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 25,
+        paddingVertical: 14,
+        alignItems: 'center',
+    },
+    saveTripButtonDisabled: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: THEME.COLOR.neutral500,
+    },
+    saveTripButtonText: {
+        color: THEME.COLOR.black,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    saveTripButtonTextDisabled: {
         color: THEME.COLOR.neutral500,
     },
 });
