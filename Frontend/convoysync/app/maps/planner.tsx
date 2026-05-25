@@ -19,9 +19,7 @@ import {
     type Suggestion,
     getSuggestions,
     deleteSuggestion,
-    getUserSuggestionCount,
     subscribeSuggestions,
-    MAX_USER_SUGGESTIONS,
     CURRENT_USER,
 } from './suggestionStore';
 
@@ -365,28 +363,6 @@ const Planner = () => {
                                         )}
                                     </View>
                                 ))
-                            )}
-                            {!IS_PARTY_LEADER && (
-                                <HapticPressable
-                                    hapticStyle="light"
-                                    onPress={() => router.push('/maps/mapSuggest')}
-                                    disabled={getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS}
-                                    style={styles.suggestLocationButton}
-                                >
-                                    <Ionicons name="add-circle-outline" size={18} color={
-                                        getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS
-                                            ? THEME.COLOR.neutral500
-                                            : THEME.COLOR.mint
-                                    } />
-                                    <Text style={[
-                                        styles.suggestLocationText,
-                                        getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS && styles.suggestLocationTextDisabled,
-                                    ]}>
-                                        {getUserSuggestionCount(CURRENT_USER.id) >= MAX_USER_SUGGESTIONS
-                                            ? 'Max 3 suggestions reached'
-                                            : 'Suggest a location'}
-                                    </Text>
-                                </HapticPressable>
                             )}
                         </View>
                     )}
