@@ -27,8 +27,49 @@ app.post('/users', async (req, res) => {
 
     res.status(201).json(newUser);
   } catch (error) {
-      console.error("Database write error:", error);
-      res.status(400).json({ error: "Could not create user account" });
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Email already tied to an existing account',
+      });
+    }
+
+    console.error("Database write error:", error);
+    res.status(400).json({ error: "Could not create user account" });
+  }
+});
+
+// POST: login
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: "Invalid email or password"
+      });
+    }
+
+    const check = await bcrypt.compare(
+      password,
+      user.pwHash
+    );
+
+    if (!check) {
+      return res.status(404).json({
+        error: "Invalid email or password"
+      });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Database read error:", error);
+    res.status(400).json({ error: "Could not complete GET request" });
   }
 });
 
