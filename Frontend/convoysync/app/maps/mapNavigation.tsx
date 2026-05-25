@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticPressable from '@/components/pressableCustomization';
 import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
+import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const ADVANCE_THRESHOLD_METERS = 30;
@@ -51,7 +52,9 @@ const MapNavigation = () => {
     const [stops, setStops] = useState<{ latitude: number; longitude: number; label: string }[]>([]);
 
     const [liveLocation, setLiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [speed, setSpeed] = useState(0);
+    const [heading, setHeading] = useState(0);
+    const [statsExpanded, setStatsExpanded] = useState(false);
+    const [cardHeight, setCardHeight] = useState(0);
     const [legs, setLegs] = useState<any[]>([]);
     const [legIndex, setLegIndex] = useState(0);
     const [stepIndex, setStepIndex] = useState(0);
@@ -61,6 +64,13 @@ const MapNavigation = () => {
     const legsRef = useRef<any[]>([]);
     const legIndexRef = useRef(0);
     const stepIndexRef = useRef(0);
+    const isFollowingRef = useRef(true);
+    const [isFollowing, setIsFollowing] = useState(true);
+
+    const setFollowing = (val: boolean) => {
+        isFollowingRef.current = val;
+        setIsFollowing(val);
+    };
 
     useEffect(() => {
         const draft = getTripPlannerDraft();
@@ -103,13 +113,15 @@ const MapNavigation = () => {
                     distanceInterval: 2,
                 },
                 ({ coords }) => {
-                    const { latitude, longitude, speed: rawSpeed, heading } = coords;
+                    const { latitude, longitude, heading } = coords;
                     setLiveLocation({ latitude, longitude });
-                    setSpeed(rawSpeed != null && rawSpeed > 0.5 ? Math.round(rawSpeed * 2.237) : 0);
-                    mapRef.current?.animateCamera(
-                        { center: { latitude, longitude }, heading: heading ?? 0, pitch: 40, zoom: 17 },
-                        { duration: 600 }
-                    );
+                    setHeading(heading ?? 0);
+                    if (isFollowingRef.current) {
+                        mapRef.current?.animateCamera(
+                            { center: { latitude, longitude }, heading: heading ?? 0, pitch: 40, zoom: 17 },
+                            { duration: 600 }
+                        );
+                    }
 
                     const li = legIndexRef.current;
                     const si = stepIndexRef.current;
@@ -162,8 +174,10 @@ const MapNavigation = () => {
           })
         : '--:--';
 
+    const formatDuration = (mins: number) =>
+        mins >= 60 ? `${Math.floor(mins / 60)} hr ${Math.ceil(mins % 60)} min` : `${Math.ceil(mins)} min`;
+
     const navTop = insets.top + 16;
-    const statsBarHeight = 70 + insets.bottom;
 
     return (
         <View style={{ flex: 1 }}>
@@ -172,11 +186,22 @@ const MapNavigation = () => {
                 provider={PROVIDER_GOOGLE}
                 mapType="satellite"
                 style={StyleSheet.absoluteFillObject}
-                showsUserLocation={true}
+                showsUserLocation={false}
                 showsMyLocationButton={false}
                 rotateEnabled={true}
                 pitchEnabled={true}
+                onPanDrag={() => setFollowing(false)}
             >
+                {liveLocation && (
+                    <Marker coordinate={liveLocation} anchor={{ x: 0.5, y: 0.5 }} flat>
+                        <Ionicons
+                            name="navigate"
+                            size={28}
+                            color={THEME.COLOR.mint}
+                            style={{ transform: [{ rotate: `${heading}deg` }] }}
+                        />
+                    </Marker>
+                )}
                 {routeOrigin && routeDestination && (
                     <MapViewDirections
                         origin={routeOrigin}
@@ -200,15 +225,6 @@ const MapNavigation = () => {
                 )}
             </MapView>
 
-            {/* Back button */}
-            <HapticPressable
-                hapticStyle="light"
-                onPress={() => router.back()}
-                style={[styles.backButton, { top: navTop }]}
-            >
-                <Ionicons name="chevron-back" size={28} color={THEME.COLOR.mint} />
-            </HapticPressable>
-
             {/* Top navigation card */}
             <View style={[styles.navCard, { top: navTop }]}>
                 <View style={styles.maneuverBox}>
@@ -231,45 +247,62 @@ const MapNavigation = () => {
                 </HapticPressable>
             </View>
 
-            {/* Return to location button — bottom right, replaces warning icon */}
-            <HapticPressable
-                hapticStyle="light"
-                style={[styles.locateButton, { bottom: statsBarHeight + 12 }]}
-                onPress={() => {
-                    if (liveLocation) {
-                        mapRef.current?.animateCamera(
-                            { center: liveLocation, pitch: 40, zoom: 17 },
-                            { duration: 500 }
-                        );
-                    }
-                }}
-            >
-                <Ionicons name="locate" size={22} color={THEME.COLOR.mint} />
-            </HapticPressable>
+            {!isFollowing && (
+                <HapticPressable
+                    hapticStyle="medium"
+                    style={[styles.recenterButton, { bottom: cardHeight + 16 }]}
+                    onPress={() => {
+                        setFollowing(true);
+                        if (liveLocation) {
+                            mapRef.current?.animateCamera(
+                                { center: liveLocation, heading, pitch: 40, zoom: 17 },
+                                { duration: 500 }
+                            );
+                        }
+                    }}
+                >
+                    <Ionicons name="navigate" size={16} color={THEME.COLOR.black} />
+                    <Text style={styles.recenterText}>Re-center</Text>
+                </HapticPressable>
+            )}
 
-            {/* Bottom stats bar */}
-            <View style={[styles.statsBar, { height: statsBarHeight, paddingBottom: insets.bottom || 12 }]}>
-                <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>SPEED</Text>
-                    <View style={styles.statValueRow}>
-                        <Text style={styles.statBig}>{speed}</Text>
-                        <Text style={styles.statUnit}> MPH</Text>
+            {remainingDuration > 0 && (
+                <View
+                    style={statsExpanded ? mapStyles.tripInfoCardExpanded : mapStyles.tripInfoCard}
+                    onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
+                >
+                    <View style={styles.handle} />
+                    <View style={styles.summaryRow}>
+                        <HapticPressable hapticStyle="light" onPress={() => setStatsExpanded(prev => !prev)} style={{ flex: 1 }}>
+                            <Text style={mapStyles.timeText}>{formatDuration(remainingDuration)}</Text>
+                            <Text style={mapStyles.distanceText}>
+                                {totalDistanceMi.toFixed(1)} mi · Arrives {eta}
+                            </Text>
+                        </HapticPressable>
+                        <HapticPressable hapticStyle="medium" onPress={() => router.replace('/maps/mapDirections')} style={styles.exitButton}>
+                            <Text style={{ color: THEME.COLOR.white, fontWeight: '600' }}>Exit</Text>
+                        </HapticPressable>
                     </View>
+
+                    {statsExpanded && (
+                        <View style={{ flex: 1 }}>
+                            <View style={styles.divider} />
+                            <View style={styles.expandedActions}>
+                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => router.push('/maps/mapDirections')}>
+                                    <Ionicons name="navigate" size={20} color={THEME.COLOR.mint} />
+                                    <Text style={styles.actionButtonText}>Directions</Text>
+                                </HapticPressable>
+                                <View style={styles.actionDivider} />
+                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => {}}>
+                                    <Ionicons name="git-branch" size={20} color="#3b82f6" />
+                                    <Text style={[styles.actionButtonText, { color: '#3b82f6' }]}>Suggest Reroute</Text>
+                                </HapticPressable>
+                            </View>
+
+                        </View>
+                    )}
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>DIST</Text>
-                    <View style={styles.statValueRow}>
-                        <Text style={styles.statBig}>{totalDistanceMi.toFixed(1)}</Text>
-                        <Text style={styles.statUnit}> mi</Text>
-                    </View>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>ETA</Text>
-                    <Text style={styles.statBig}>{eta}</Text>
-                </View>
-            </View>
+            )}
         </View>
     );
 };
@@ -287,9 +320,7 @@ const styles = StyleSheet.create({
     },
     navCard: {
         position: 'absolute',
-        left: 60,
-        right: 16,
-        backgroundColor: 'rgba(8, 8, 8, 0.92)',
+        backgroundColor: THEME.COLOR.black,
         borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
@@ -297,13 +328,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         gap: 10,
         borderWidth: 1,
-        borderColor: 'rgba(118, 224, 187, 0.2)',
-        zIndex: 10,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.6,
-        shadowRadius: 8,
     },
     maneuverBox: {
         width: 50,
@@ -340,65 +364,69 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(59, 130, 246, 0.25)',
     },
-    locateButton: {
+    handle: {
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignSelf: 'center',
+        marginBottom: 12,
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginVertical: 12,
+    },
+    recenterButton: {
         position: 'absolute',
-        right: 20,
-        width: 50,
+        alignSelf: 'center',
+        left: '50%',
+        transform: [{ translateX: -60 }],
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 20,
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+        zIndex: 20,
+        elevation: 20,
+    },
+    recenterText: {
+        color: THEME.COLOR.black,
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    exitButton: {
+        width: 70,
         height: 50,
         borderRadius: 25,
-        borderWidth: 1,
-        borderColor: THEME.COLOR.mint,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backgroundColor: '#ef4444',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 10,
-        elevation: 10,
     },
-    statsBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'rgba(8, 8, 8, 0.95)',
+    expandedActions: {
+        flexDirection: 'column',
+    },
+    actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.08)',
-        zIndex: 10,
-        elevation: 10,
+        paddingVertical: 14,
+        gap: 10,
     },
-    statItem: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    statLabel: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 10,
+    actionButtonText: {
+        color: THEME.COLOR.mint,
+        fontSize: 14,
         fontWeight: '600',
-        letterSpacing: 1.5,
-        marginBottom: 2,
     },
-    statValueRow: {
-        flexDirection: 'row',
-        alignItems: 'baseline',
-    },
-    statBig: {
-        color: THEME.COLOR.white,
-        fontSize: 30,
-        fontWeight: '200',
-        letterSpacing: -0.5,
-    },
-    statUnit: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 12,
-        fontWeight: '500',
-        marginBottom: 2,
-    },
-    statDivider: {
-        width: 1,
-        height: 36,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    actionDivider: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
     },
 });
 
