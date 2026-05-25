@@ -18,7 +18,7 @@ const Login = () => {
         // proceed to home only when form is valid
         try {
             // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
-            const response = await fetch('http://192.168.1.129:8080/auth/login', {
+            const response = await fetch('http://192.168.x.x:8080/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
