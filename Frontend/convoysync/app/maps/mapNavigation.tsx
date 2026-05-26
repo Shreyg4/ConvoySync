@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import HapticPressable from '@/components/pressableCustomization';
 import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
+import { setNavState } from './navigationStore';
 import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -65,6 +66,8 @@ const MapNavigation = () => {
     const legIndexRef = useRef(0);
     const stepIndexRef = useRef(0);
     const isFollowingRef = useRef(true);
+    const liveLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+    const headingRef = useRef(0);
     const [isFollowing, setIsFollowing] = useState(true);
 
     const setFollowing = (val: boolean) => {
@@ -115,7 +118,9 @@ const MapNavigation = () => {
                 ({ coords }) => {
                     const { latitude, longitude, heading } = coords;
                     setLiveLocation({ latitude, longitude });
+                    liveLocationRef.current = { latitude, longitude };
                     setHeading(heading ?? 0);
+                    headingRef.current = heading ?? 0;
                     if (isFollowingRef.current) {
                         mapRef.current?.animateCamera(
                             { center: { latitude, longitude }, heading: heading ?? 0, pitch: 40, zoom: 17 },
@@ -157,6 +162,9 @@ const MapNavigation = () => {
     }, []);
 
     const activeStops = stops.filter(s => s.latitude !== 0 || s.longitude !== 0);
+    const legLabels = destination
+        ? [destinationLabel, ...activeStops.map(s => s.label)]
+        : activeStops.map(s => s.label);
     const routePoints = destination ? [destination, ...activeStops] : activeStops;
     const routeDestination = routePoints[routePoints.length - 1] ?? null;
     const routeWaypoints = routePoints.slice(0, routePoints.length - 1);
@@ -212,14 +220,22 @@ const MapNavigation = () => {
                         strokeWidth={5}
                         onReady={(result) => {
                             const fetchedLegs = (result as any).legs ?? [];
+                            const distMi = result.distance * 0.621371;
                             setLegs(fetchedLegs);
                             legsRef.current = fetchedLegs;
                             setRemainingDuration(result.duration);
-                            setTotalDistanceMi(result.distance * 0.621371);
+                            setTotalDistanceMi(distMi);
                             setLegIndex(0);
                             setStepIndex(0);
                             legIndexRef.current = 0;
                             stepIndexRef.current = 0;
+                            setNavState({
+                                legs: fetchedLegs,
+                                legLabels,
+                                remainingDuration: result.duration,
+                                totalDistanceMi: distMi,
+                                activeLegIndex: 0,
+                            });
                         }}
                     />
                 )}
@@ -253,9 +269,10 @@ const MapNavigation = () => {
                     style={[styles.recenterButton, { bottom: cardHeight + 16 }]}
                     onPress={() => {
                         setFollowing(true);
-                        if (liveLocation) {
+                        const loc = liveLocationRef.current;
+                        if (loc) {
                             mapRef.current?.animateCamera(
-                                { center: liveLocation, heading, pitch: 40, zoom: 17 },
+                                { center: loc, heading: headingRef.current, pitch: 40, zoom: 17 },
                                 { duration: 500 }
                             );
                         }
@@ -288,7 +305,7 @@ const MapNavigation = () => {
                         <View style={{ flex: 1 }}>
                             <View style={styles.divider} />
                             <View style={styles.expandedActions}>
-                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => router.push('/maps/mapDirections')}>
+                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => router.push('/maps/navDirections')}>
                                     <Ionicons name="navigate" size={20} color={THEME.COLOR.mint} />
                                     <Text style={styles.actionButtonText}>Directions</Text>
                                 </HapticPressable>
