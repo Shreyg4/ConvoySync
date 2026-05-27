@@ -7,8 +7,10 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
+import { useRouter } from 'expo-router';
 
 const CreateTrip = () => {
+    const router = useRouter();
     const { control, handleSubmit, setValue } = useForm({
         defaultValues: {
             tripName: '',
@@ -112,6 +114,14 @@ const CreateTrip = () => {
                 />
                 <HapticPressable onPress={handleSubmit((data) => console.log(data))} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
+                </HapticPressable>
+                <HapticPressable
+                    onPress={() => router.push('/tripInfoMember')}
+                    style={globalStyles.logOutButton}
+                    hapticStyle="light"
+                    showVisualFeedback
+                >
+                    <Text style={[globalStyles.logOutButtonText, { color: THEME.COLOR.mint }]}>Open Trip Info Test Screen</Text>
                 </HapticPressable>
             </SafeAreaView>
         </TouchableWithoutFeedback>
