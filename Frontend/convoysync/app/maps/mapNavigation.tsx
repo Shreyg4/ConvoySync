@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import HapticPressable from '@/components/pressableCustomization';
@@ -14,6 +15,7 @@ import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const ADVANCE_THRESHOLD_METERS = 30;
+const HEADING_CAMERA_DELAY_MS = 450;
 
 const getManeuverIcon = (maneuver?: string): any => {
     switch (maneuver) {
@@ -46,6 +48,15 @@ const MapNavigation = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const mapRef = useRef<MapView>(null);
+    const mapReadyRef = useRef(false);
+    const headingCameraTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingCameraRef = useRef<{
+        center: { latitude: number; longitude: number };
+        heading: number;
+        pitch: number;
+        zoom: number;
+        duration?: number;
+    } | null>(null);
 
     const [customOrigin, setCustomOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -73,6 +84,46 @@ const MapNavigation = () => {
     const setFollowing = (val: boolean) => {
         isFollowingRef.current = val;
         setIsFollowing(val);
+
+        if (!val && headingCameraTimeoutRef.current) {
+            clearTimeout(headingCameraTimeoutRef.current);
+            headingCameraTimeoutRef.current = null;
+        }
+    };
+
+    const focusCamera = (
+        center: { latitude: number; longitude: number },
+        nextHeading: number,
+        duration?: number
+    ) => {
+        const camera = {
+            center,
+            heading: nextHeading,
+            pitch: 40,
+            zoom: 17,
+        };
+
+        if (!mapReadyRef.current) {
+            pendingCameraRef.current = { ...camera, duration };
+            return;
+        }
+
+        mapRef.current?.animateCamera(camera, duration ? { duration } : undefined);
+    };
+
+    const scheduleHeadingCameraUpdate = (nextHeading: number) => {
+        if (headingCameraTimeoutRef.current) {
+            clearTimeout(headingCameraTimeoutRef.current);
+        }
+
+        headingCameraTimeoutRef.current = setTimeout(() => {
+            headingCameraTimeoutRef.current = null;
+            const loc = liveLocationRef.current;
+
+            if (!isFollowingRef.current || !mapReadyRef.current || !loc) return;
+
+            focusCamera(loc, nextHeading, 250);
+        }, HEADING_CAMERA_DELAY_MS);
     };
 
     useEffect(() => {
@@ -87,8 +138,44 @@ const MapNavigation = () => {
     useEffect(() => { legIndexRef.current = legIndex; }, [legIndex]);
     useEffect(() => { stepIndexRef.current = stepIndex; }, [stepIndex]);
 
+    useFocusEffect(
+        React.useCallback(() => {
+            setFollowing(true);
+
+            const recenterToLiveLocation = async () => {
+                const currentLoc = liveLocationRef.current;
+                if (currentLoc) {
+                    focusCamera(currentLoc, headingRef.current, 500);
+                    return;
+                }
+
+                const lastKnown = await Location.getLastKnownPositionAsync();
+                if (!lastKnown?.coords) return;
+
+                const nextLoc = {
+                    latitude: lastKnown.coords.latitude,
+                    longitude: lastKnown.coords.longitude,
+                };
+
+                setLiveLocation(nextLoc);
+                liveLocationRef.current = nextLoc;
+                focusCamera(nextLoc, headingRef.current, 500);
+            };
+
+            void recenterToLiveLocation();
+
+            return () => {
+                if (headingCameraTimeoutRef.current) {
+                    clearTimeout(headingCameraTimeoutRef.current);
+                    headingCameraTimeoutRef.current = null;
+                }
+            };
+        }, [])
+    );
+
     useEffect(() => {
         let sub: Location.LocationSubscription | null = null;
+        let headingSub: Location.LocationSubscription | null = null;
 
         (async () => {
             const { status } = await Location.requestForegroundPermissionsAsync();
@@ -102,11 +189,18 @@ const MapNavigation = () => {
                 longitude: initial.coords.longitude,
             };
             setLiveLocation(initLoc);
-            mapRef.current?.animateCamera({
-                center: initLoc,
-                heading: initial.coords.heading ?? 0,
-                pitch: 40,
-                zoom: 17,
+            liveLocationRef.current = initLoc;
+            setHeading(initial.coords.heading ?? 0);
+            headingRef.current = initial.coords.heading ?? 0;
+            focusCamera(initLoc, initial.coords.heading ?? 0);
+
+            headingSub = await Location.watchHeadingAsync(({ trueHeading, magHeading }) => {
+                const h = trueHeading >= 0 ? trueHeading : magHeading;
+                setHeading(h);
+                headingRef.current = h;
+                if (isFollowingRef.current) {
+                    scheduleHeadingCameraUpdate(h);
+                }
             });
 
             sub = await Location.watchPositionAsync(
@@ -116,16 +210,11 @@ const MapNavigation = () => {
                     distanceInterval: 2,
                 },
                 ({ coords }) => {
-                    const { latitude, longitude, heading } = coords;
+                    const { latitude, longitude } = coords;
                     setLiveLocation({ latitude, longitude });
                     liveLocationRef.current = { latitude, longitude };
-                    setHeading(heading ?? 0);
-                    headingRef.current = heading ?? 0;
                     if (isFollowingRef.current) {
-                        mapRef.current?.animateCamera(
-                            { center: { latitude, longitude }, heading: heading ?? 0, pitch: 40, zoom: 17 },
-                            { duration: 600 }
-                        );
+                        focusCamera({ latitude, longitude }, headingRef.current, 600);
                     }
 
                     const li = legIndexRef.current;
@@ -158,7 +247,15 @@ const MapNavigation = () => {
             );
         })();
 
-        return () => { sub?.remove(); };
+        return () => {
+            if (headingCameraTimeoutRef.current) {
+                clearTimeout(headingCameraTimeoutRef.current);
+                headingCameraTimeoutRef.current = null;
+            }
+
+            sub?.remove();
+            headingSub?.remove();
+        };
     }, []);
 
     const activeStops = stops.filter(s => s.latitude !== 0 || s.longitude !== 0);
@@ -192,18 +289,37 @@ const MapNavigation = () => {
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
-                mapType="satellite"
+                mapType="standard"
                 style={StyleSheet.absoluteFillObject}
                 showsUserLocation={false}
                 showsMyLocationButton={false}
                 rotateEnabled={true}
                 pitchEnabled={true}
                 onPanDrag={() => setFollowing(false)}
+                onMapReady={() => {
+                    mapReadyRef.current = true;
+
+                    if (pendingCameraRef.current) {
+                        const pendingCamera = pendingCameraRef.current;
+                        pendingCameraRef.current = null;
+                        mapRef.current?.animateCamera(
+                            {
+                                center: pendingCamera.center,
+                                heading: pendingCamera.heading,
+                                pitch: pendingCamera.pitch,
+                                zoom: pendingCamera.zoom,
+                            },
+                            pendingCamera.duration ? { duration: pendingCamera.duration } : undefined
+                        );
+                    } else if (liveLocationRef.current) {
+                        focusCamera(liveLocationRef.current, headingRef.current);
+                    }
+                }}
             >
                 {liveLocation && (
                     <Marker coordinate={liveLocation} anchor={{ x: 0.5, y: 0.5 }} flat>
                         <Ionicons
-                            name="navigate"
+                            name="arrow-up-circle"
                             size={28}
                             color={THEME.COLOR.mint}
                             style={{ transform: [{ rotate: `${heading}deg` }] }}
@@ -216,7 +332,7 @@ const MapNavigation = () => {
                         destination={routeDestination}
                         waypoints={routeWaypoints}
                         apikey={GOOGLE_API_KEY}
-                        strokeColor={THEME.COLOR.mint}
+                        strokeColor="#0d00ff"
                         strokeWidth={5}
                         onReady={(result) => {
                             const fetchedLegs = (result as any).legs ?? [];
@@ -259,7 +375,7 @@ const MapNavigation = () => {
                     ) : null}
                 </View>
                 <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => {}}>
-                    <Ionicons name="people" size={20} color="#3b82f6" />
+                    <Ionicons name="people" size={20} color="#4285F4" />
                 </HapticPressable>
             </View>
 
@@ -271,10 +387,7 @@ const MapNavigation = () => {
                         setFollowing(true);
                         const loc = liveLocationRef.current;
                         if (loc) {
-                            mapRef.current?.animateCamera(
-                                { center: loc, heading: headingRef.current, pitch: 40, zoom: 17 },
-                                { duration: 500 }
-                            );
+                            focusCamera(loc, headingRef.current, 500);
                         }
                     }}
                 >
@@ -311,8 +424,8 @@ const MapNavigation = () => {
                                 </HapticPressable>
                                 <View style={styles.actionDivider} />
                                 <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => {}}>
-                                    <Ionicons name="git-branch" size={20} color="#3b82f6" />
-                                    <Text style={[styles.actionButtonText, { color: '#3b82f6' }]}>Suggest Reroute</Text>
+                                    <Ionicons name="git-branch" size={20} color="#4285F4" />
+                                    <Text style={[styles.actionButtonText, { color: '#4285F4' }]}>Suggest Reroute</Text>
                                 </HapticPressable>
                             </View>
 

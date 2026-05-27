@@ -115,7 +115,7 @@ const MapDirections = () => {
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
-                mapType="satellite"
+                mapType="standard"
                 style={StyleSheet.absoluteFillObject}
                 showsUserLocation={locationGranted}
                 showsMyLocationButton={false}
