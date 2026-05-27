@@ -45,6 +45,11 @@ const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): numb
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
 
+const placeTitle = (label: string): string => {
+    const comma = label.indexOf(',');
+    return comma > 0 ? label.substring(0, comma) : label;
+};
+
 const formatDistanceToTurn = (meters: number): string => {
     const feet = meters * 3.28084;
     if (feet < 1000) return `${Math.round(feet / 10) * 10} ft`;
@@ -406,7 +411,7 @@ const MapNavigation = () => {
                         <Text style={styles.distanceToTurn}>{distanceToTurn}</Text>
                     ) : null}
                 </View>
-                <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => {}}>
+                <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => router.push('/maps/convoyEta')}>
                     <Ionicons name="people" size={20} color="#4285F4" />
                 </HapticPressable>
             </View>}
@@ -468,8 +473,8 @@ const MapNavigation = () => {
 
             {arrived && (() => {
                 const isLastStop = currentDestIndex === routePoints.length - 1;
-                const arrivedLabel = legLabels[currentDestIndex] ?? 'Destination';
-                const nextLabel = !isLastStop ? (legLabels[currentDestIndex + 1] ?? 'Next stop') : '';
+                const arrivedLabel = placeTitle(legLabels[currentDestIndex] ?? 'Destination');
+                const nextLabel = !isLastStop ? placeTitle(legLabels[currentDestIndex + 1] ?? 'Next stop') : '';
                 return (
                     <>
                         {/* Top arrived banner */}
@@ -477,9 +482,9 @@ const MapNavigation = () => {
                             <View style={styles.arrivedBannerIcon}>
                                 <Ionicons name="checkmark" size={18} color={THEME.COLOR.black} />
                             </View>
-                            <View>
+                            <View style={{ flex: 1 }}>
                                 <Text style={styles.arrivedBannerTitle}>Arrived!</Text>
-                                <Text style={styles.arrivedBannerSub} numberOfLines={1}>{arrivedLabel}</Text>
+                                <Text style={styles.arrivedBannerSub} numberOfLines={1} ellipsizeMode="tail">{arrivedLabel}</Text>
                             </View>
                         </View>
 
@@ -488,7 +493,7 @@ const MapNavigation = () => {
                             {isLastStop ? (
                                 <>
                                     <Text style={styles.nextDestLabel}>TRIP COMPLETE</Text>
-                                    <Text style={styles.nextDestName} numberOfLines={2}>{arrivedLabel}</Text>
+                                    <Text style={styles.nextDestName} numberOfLines={1} ellipsizeMode="tail">{arrivedLabel}</Text>
                                     <HapticPressable
                                         hapticStyle="medium"
                                         style={styles.startButton}
@@ -500,7 +505,7 @@ const MapNavigation = () => {
                             ) : (
                                 <>
                                     <Text style={styles.nextDestLabel}>NEXT DESTINATION</Text>
-                                    <Text style={styles.nextDestName} numberOfLines={2}>{nextLabel}</Text>
+                                    <Text style={styles.nextDestName} numberOfLines={1} ellipsizeMode="tail">{nextLabel}</Text>
                                     {/* Squad ETAs — placeholder until backend is wired */}
                                     <View style={styles.squadRow}>
                                         <View style={styles.squadPlaceholderAvatars}>

@@ -39,6 +39,7 @@ const createMemberInitials = (name: string) =>
 const TripInfo = () => {
     const router = useRouter();
     const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
+    const [hasRoute, setHasRoute] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -73,6 +74,7 @@ const TripInfo = () => {
             });
 
             setItinerary(nextItinerary);
+            setHasRoute(draft.destination !== null || activeStops.length > 0);
         }, [])
     );
 
@@ -164,6 +166,17 @@ const TripInfo = () => {
                     onPress={() => router.push('/maps/planner')}
                 >
                     <Text style={globalStyles.AddButtonText}><Ionicons name="add" size={15} color={THEME.COLOR.neutral500} /> Edit Itinerary</Text>
+                </HapticPressable>
+
+                <HapticPressable
+                    hapticStyle="medium"
+                    style={[styles.startButton, !hasRoute && styles.startButtonDisabled]}
+                    onPress={() => { if (hasRoute) router.replace('/maps/mapNavigation'); }}
+                >
+                    <Ionicons name="navigate" size={18} color={hasRoute ? THEME.COLOR.black : THEME.COLOR.neutral500} />
+                    <Text style={[styles.startButtonText, !hasRoute && styles.startButtonTextDisabled]}>
+                        Start Trip
+                    </Text>
                 </HapticPressable>
             </ScrollView>
         </SafeAreaView>
@@ -379,6 +392,29 @@ const styles = StyleSheet.create({
         color: THEME.COLOR.neutral400,
         fontSize: THEME.FONT_SIZE.sm,
         lineHeight: 18,
+    },
+    startButton: {
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: THEME.BORDER_RADIUS.xl,
+        paddingVertical: THEME.SPACING.md,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: THEME.SPACING.lg,
+    },
+    startButtonDisabled: {
+        backgroundColor: THEME.COLOR.surface,
+        borderWidth: 1,
+        borderColor: THEME.COLOR.border,
+    },
+    startButtonText: {
+        color: THEME.COLOR.black,
+        fontSize: THEME.FONT_SIZE.md,
+        fontWeight: '800',
+    },
+    startButtonTextDisabled: {
+        color: THEME.COLOR.neutral500,
     },
 });
 
