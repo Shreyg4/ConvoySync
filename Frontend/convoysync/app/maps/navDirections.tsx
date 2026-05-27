@@ -46,7 +46,7 @@ const NavDirections = () => {
                     title="Directions"
                     icon="chevron-back"
                     color={THEME.COLOR.mint}
-                    onPress={() => router.replace('/maps/mapNavigation')}
+                    onPress={() => router.back()}
                 />
             </View>
 

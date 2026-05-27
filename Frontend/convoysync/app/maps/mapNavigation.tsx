@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
@@ -15,6 +15,7 @@ import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const ADVANCE_THRESHOLD_METERS = 30;
+const ARRIVAL_THRESHOLD_METERS = 50;
 const HEADING_CAMERA_DELAY_MS = 450;
 
 const getManeuverIcon = (maneuver?: string): any => {
@@ -44,6 +45,12 @@ const haversine = (lat1: number, lon1: number, lat2: number, lon2: number): numb
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
 
+const formatDistanceToTurn = (meters: number): string => {
+    const feet = meters * 3.28084;
+    if (feet < 1000) return `${Math.round(feet / 10) * 10} ft`;
+    return `${(meters * 0.000621371).toFixed(1)} mi`;
+};
+
 const MapNavigation = () => {
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -64,6 +71,7 @@ const MapNavigation = () => {
     const [stops, setStops] = useState<{ latitude: number; longitude: number; label: string }[]>([]);
 
     const [liveLocation, setLiveLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [initialLocationReady, setInitialLocationReady] = useState(false);
     const [heading, setHeading] = useState(0);
     const [statsExpanded, setStatsExpanded] = useState(false);
     const [cardHeight, setCardHeight] = useState(0);
@@ -80,6 +88,15 @@ const MapNavigation = () => {
     const liveLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
     const headingRef = useRef(0);
     const [isFollowing, setIsFollowing] = useState(true);
+    const [arrived, setArrived] = useState(false);
+    const arrivedRef = useRef(false);
+    const [currentDestIndex, setCurrentDestIndex] = useState(0);
+    const currentDestIndexRef = useRef(0);
+    const [squadExpanded, setSquadExpanded] = useState(false);
+    const routeDestinationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+    const [routeStartOrigin, setRouteStartOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
+    const routeStartOriginSetRef = useRef(false);
+    const [distanceToNextTurn, setDistanceToNextTurn] = useState<number | null>(null);
 
     const setFollowing = (val: boolean) => {
         isFollowingRef.current = val;
@@ -132,11 +149,21 @@ const MapNavigation = () => {
         setDestination(draft.destination);
         setDestinationLabel(draft.destinationLabel);
         setStops(draft.stops);
+        if (draft.customOrigin) {
+            setRouteStartOrigin(draft.customOrigin);
+            routeStartOriginSetRef.current = true;
+        }
     }, []);
 
     useEffect(() => { legsRef.current = legs; }, [legs]);
     useEffect(() => { legIndexRef.current = legIndex; }, [legIndex]);
     useEffect(() => { stepIndexRef.current = stepIndex; }, [stepIndex]);
+
+    useEffect(() => {
+        const activeStops = stops.filter(s => s.latitude !== 0 || s.longitude !== 0);
+        const pts = destination ? [destination, ...activeStops] : activeStops;
+        routeDestinationRef.current = pts[currentDestIndex] ?? null;
+    }, [destination, stops, currentDestIndex]);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -146,20 +173,7 @@ const MapNavigation = () => {
                 const currentLoc = liveLocationRef.current;
                 if (currentLoc) {
                     focusCamera(currentLoc, headingRef.current, 500);
-                    return;
                 }
-
-                const lastKnown = await Location.getLastKnownPositionAsync();
-                if (!lastKnown?.coords) return;
-
-                const nextLoc = {
-                    latitude: lastKnown.coords.latitude,
-                    longitude: lastKnown.coords.longitude,
-                };
-
-                setLiveLocation(nextLoc);
-                liveLocationRef.current = nextLoc;
-                focusCamera(nextLoc, headingRef.current, 500);
             };
 
             void recenterToLiveLocation();
@@ -192,7 +206,12 @@ const MapNavigation = () => {
             liveLocationRef.current = initLoc;
             setHeading(initial.coords.heading ?? 0);
             headingRef.current = initial.coords.heading ?? 0;
+            setInitialLocationReady(true);
             focusCamera(initLoc, initial.coords.heading ?? 0);
+            if (!routeStartOriginSetRef.current) {
+                setRouteStartOrigin(initLoc);
+                routeStartOriginSetRef.current = true;
+            }
 
             headingSub = await Location.watchHeadingAsync(({ trueHeading, magHeading }) => {
                 const h = trueHeading >= 0 ? trueHeading : magHeading;
@@ -225,6 +244,7 @@ const MapNavigation = () => {
                             latitude, longitude,
                             step.end_location.lat, step.end_location.lng
                         );
+                        setDistanceToNextTurn(dist);
                         if (dist < ADVANCE_THRESHOLD_METERS) {
                             const stepDurationMin = (step.duration?.value ?? 0) / 60;
                             setRemainingDuration(prev => Math.max(0, prev - stepDurationMin));
@@ -233,14 +253,19 @@ const MapNavigation = () => {
                                 setStepIndex(nextSi);
                                 stepIndexRef.current = nextSi;
                             } else {
-                                const nextLi = li + 1;
-                                if (nextLi < legsRef.current.length) {
-                                    setLegIndex(nextLi);
-                                    setStepIndex(0);
-                                    legIndexRef.current = nextLi;
-                                    stepIndexRef.current = 0;
+                                if (!arrivedRef.current) {
+                                    arrivedRef.current = true;
+                                    setArrived(true);
                                 }
                             }
+                        }
+                    }
+
+                    if (!arrivedRef.current && routeDestinationRef.current) {
+                        const distToFinal = haversine(latitude, longitude, routeDestinationRef.current.latitude, routeDestinationRef.current.longitude);
+                        if (distToFinal < ARRIVAL_THRESHOLD_METERS) {
+                            arrivedRef.current = true;
+                            setArrived(true);
                         }
                     }
                 }
@@ -263,15 +288,11 @@ const MapNavigation = () => {
         ? [destinationLabel, ...activeStops.map(s => s.label)]
         : activeStops.map(s => s.label);
     const routePoints = destination ? [destination, ...activeStops] : activeStops;
-    const routeDestination = routePoints[routePoints.length - 1] ?? null;
-    const routeWaypoints = routePoints.slice(0, routePoints.length - 1);
-    const routeOrigin = customOrigin || liveLocation;
-
     const currentStep = legs[legIndex]?.steps?.[stepIndex];
     const instruction = currentStep
         ? stripHtml(currentStep.html_instructions)
-        : routeDestination ? 'Follow the route' : 'No route set';
-    const distanceToTurn = currentStep?.distance?.text ?? '';
+        : routePoints[currentDestIndex] ? 'Follow the route' : 'No route set';
+    const distanceToTurn = distanceToNextTurn !== null ? formatDistanceToTurn(distanceToNextTurn) : '';
     const eta = remainingDuration > 0
         ? new Date(Date.now() + remainingDuration * 60 * 1000).toLocaleTimeString([], {
               hour: '2-digit',
@@ -286,37 +307,43 @@ const MapNavigation = () => {
 
     return (
         <View style={{ flex: 1 }}>
-            <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                mapType="standard"
-                style={StyleSheet.absoluteFillObject}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-                rotateEnabled={true}
-                pitchEnabled={true}
-                onPanDrag={() => setFollowing(false)}
-                onMapReady={() => {
-                    mapReadyRef.current = true;
+            {initialLocationReady && liveLocation ? (
+                <MapView
+                    ref={mapRef}
+                    provider={PROVIDER_GOOGLE}
+                    mapType="standard"
+                    style={StyleSheet.absoluteFillObject}
+                    initialCamera={{
+                        center: liveLocation,
+                        heading: headingRef.current,
+                        pitch: 40,
+                        zoom: 17,
+                    }}
+                    showsUserLocation={false}
+                    showsMyLocationButton={false}
+                    rotateEnabled={true}
+                    pitchEnabled={true}
+                    onPanDrag={() => setFollowing(false)}
+                    onMapReady={() => {
+                        mapReadyRef.current = true;
 
-                    if (pendingCameraRef.current) {
-                        const pendingCamera = pendingCameraRef.current;
-                        pendingCameraRef.current = null;
-                        mapRef.current?.animateCamera(
-                            {
-                                center: pendingCamera.center,
-                                heading: pendingCamera.heading,
-                                pitch: pendingCamera.pitch,
-                                zoom: pendingCamera.zoom,
-                            },
-                            pendingCamera.duration ? { duration: pendingCamera.duration } : undefined
-                        );
-                    } else if (liveLocationRef.current) {
-                        focusCamera(liveLocationRef.current, headingRef.current);
-                    }
-                }}
-            >
-                {liveLocation && (
+                        if (pendingCameraRef.current) {
+                            const pendingCamera = pendingCameraRef.current;
+                            pendingCameraRef.current = null;
+                            mapRef.current?.animateCamera(
+                                {
+                                    center: pendingCamera.center,
+                                    heading: pendingCamera.heading,
+                                    pitch: pendingCamera.pitch,
+                                    zoom: pendingCamera.zoom,
+                                },
+                                pendingCamera.duration ? { duration: pendingCamera.duration } : undefined
+                            );
+                        } else if (liveLocationRef.current) {
+                            focusCamera(liveLocationRef.current, headingRef.current);
+                        }
+                    }}
+                >
                     <Marker coordinate={liveLocation} anchor={{ x: 0.5, y: 0.5 }} flat>
                         <Ionicons
                             name="arrow-up-circle"
@@ -325,40 +352,45 @@ const MapNavigation = () => {
                             style={{ transform: [{ rotate: `${heading}deg` }] }}
                         />
                     </Marker>
-                )}
-                {routeOrigin && routeDestination && (
-                    <MapViewDirections
-                        origin={routeOrigin}
-                        destination={routeDestination}
-                        waypoints={routeWaypoints}
-                        apikey={GOOGLE_API_KEY}
-                        strokeColor="#0d00ff"
-                        strokeWidth={5}
-                        onReady={(result) => {
-                            const fetchedLegs = (result as any).legs ?? [];
-                            const distMi = result.distance * 0.621371;
-                            setLegs(fetchedLegs);
-                            legsRef.current = fetchedLegs;
-                            setRemainingDuration(result.duration);
-                            setTotalDistanceMi(distMi);
-                            setLegIndex(0);
-                            setStepIndex(0);
-                            legIndexRef.current = 0;
-                            stepIndexRef.current = 0;
-                            setNavState({
-                                legs: fetchedLegs,
-                                legLabels,
-                                remainingDuration: result.duration,
-                                totalDistanceMi: distMi,
-                                activeLegIndex: 0,
-                            });
-                        }}
-                    />
-                )}
-            </MapView>
+                    {routeStartOrigin && routePoints[currentDestIndex] && (
+                        <MapViewDirections
+                            origin={routeStartOrigin}
+                            destination={routePoints[currentDestIndex]!}
+                            apikey={GOOGLE_API_KEY}
+                            strokeColor="#0d00ff"
+                            strokeWidth={5}
+                            onReady={(result) => {
+                                const fetchedLegs = (result as any).legs ?? [];
+                                const distMi = result.distance * 0.621371;
+                                setLegs(fetchedLegs);
+                                legsRef.current = fetchedLegs;
+                                setRemainingDuration(result.duration);
+                                setTotalDistanceMi(distMi);
+                                setLegIndex(0);
+                                setStepIndex(0);
+                                legIndexRef.current = 0;
+                                stepIndexRef.current = 0;
+                                setNavState({
+                                    legs: fetchedLegs,
+                                    legLabels,
+                                    remainingDuration: result.duration,
+                                    totalDistanceMi: distMi,
+                                    activeLegIndex: 0,
+                                });
+                            }}
+                        />
+                    )}
+                </MapView>
+            ) : (
+                <View style={styles.loadingState}>
+                    <ActivityIndicator size="large" color={THEME.COLOR.mint} />
+                    <Text style={styles.loadingTitle}>Finding your location...</Text>
+                    <Text style={styles.loadingSubtitle}>Navigation will start as soon as GPS locks in.</Text>
+                </View>
+            )}
 
             {/* Top navigation card */}
-            <View style={[styles.navCard, { top: navTop }]}>
+            {!arrived && <View style={[styles.navCard, { top: navTop }]}>
                 <View style={styles.maneuverBox}>
                     <Ionicons
                         name={getManeuverIcon(currentStep?.maneuver)}
@@ -377,7 +409,7 @@ const MapNavigation = () => {
                 <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => {}}>
                     <Ionicons name="people" size={20} color="#4285F4" />
                 </HapticPressable>
-            </View>
+            </View>}
 
             {!isFollowing && (
                 <HapticPressable
@@ -433,6 +465,106 @@ const MapNavigation = () => {
                     )}
                 </View>
             )}
+
+            {arrived && (() => {
+                const isLastStop = currentDestIndex === routePoints.length - 1;
+                const arrivedLabel = legLabels[currentDestIndex] ?? 'Destination';
+                const nextLabel = !isLastStop ? (legLabels[currentDestIndex + 1] ?? 'Next stop') : '';
+                return (
+                    <>
+                        {/* Top arrived banner */}
+                        <View style={[styles.arrivedBanner, { top: navTop }]}>
+                            <View style={styles.arrivedBannerIcon}>
+                                <Ionicons name="checkmark" size={18} color={THEME.COLOR.black} />
+                            </View>
+                            <View>
+                                <Text style={styles.arrivedBannerTitle}>Arrived!</Text>
+                                <Text style={styles.arrivedBannerSub} numberOfLines={1}>{arrivedLabel}</Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom card */}
+                        <View style={styles.arrivedBottomCard}>
+                            {isLastStop ? (
+                                <>
+                                    <Text style={styles.nextDestLabel}>TRIP COMPLETE</Text>
+                                    <Text style={styles.nextDestName} numberOfLines={2}>{arrivedLabel}</Text>
+                                    <HapticPressable
+                                        hapticStyle="medium"
+                                        style={styles.startButton}
+                                        onPress={() => router.replace('/maps/mapDirections')}
+                                    >
+                                        <Text style={styles.startButtonText}>Done</Text>
+                                    </HapticPressable>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.nextDestLabel}>NEXT DESTINATION</Text>
+                                    <Text style={styles.nextDestName} numberOfLines={2}>{nextLabel}</Text>
+                                    {/* Squad ETAs — placeholder until backend is wired */}
+                                    <View style={styles.squadRow}>
+                                        <View style={styles.squadPlaceholderAvatars}>
+                                            {['D', 'A', 'S'].map((init, i) => (
+                                                <View
+                                                    key={i}
+                                                    style={[
+                                                        styles.squadAvatar,
+                                                        { marginLeft: i > 0 ? -8 : 0 },
+                                                        i === 0 && { backgroundColor: '#9333ea' },
+                                                        i === 1 && { backgroundColor: '#16a34a' },
+                                                        i === 2 && { backgroundColor: '#dc2626' },
+                                                    ]}
+                                                >
+                                                    <Text style={styles.squadAvatarText}>{init}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                        <HapticPressable hapticStyle="light" style={styles.squadEtaBtn} onPress={() => setSquadExpanded(p => !p)}>
+                                            <Text style={styles.squadEtaLabel}>SQUAD ETAS</Text>
+                                            <Ionicons name={squadExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={THEME.COLOR.mint} />
+                                        </HapticPressable>
+                                    </View>
+                                    {squadExpanded && (
+                                        <View style={styles.squadEtaList}>
+                                            <Text style={styles.squadEtaPlaceholder}>ETAs available once backend is connected</Text>
+                                        </View>
+                                    )}
+
+                                    <HapticPressable
+                                        hapticStyle="medium"
+                                        style={styles.startButton}
+                                        onPress={() => {
+                                            const nextIdx = currentDestIndex + 1;
+                                            setCurrentDestIndex(nextIdx);
+                                            currentDestIndexRef.current = nextIdx;
+                                            setRouteStartOrigin(liveLocationRef.current);
+                                            routeStartOriginSetRef.current = true;
+                                            setArrived(false);
+                                            arrivedRef.current = false;
+                                            setDistanceToNextTurn(null);
+                                            setLegs([]);
+                                            legsRef.current = [];
+                                            setLegIndex(0);
+                                            legIndexRef.current = 0;
+                                            setStepIndex(0);
+                                            stepIndexRef.current = 0;
+                                            setRemainingDuration(0);
+                                            setTotalDistanceMi(0);
+                                            setSquadExpanded(false);
+                                            setFollowing(true);
+                                            const loc = liveLocationRef.current;
+                                            if (loc) focusCamera(loc, headingRef.current, 500);
+                                        }}
+                                    >
+                                        <Text style={styles.startButtonText}>Start</Text>
+                                        <Ionicons name="chevron-forward" size={18} color={THEME.COLOR.black} />
+                                    </HapticPressable>
+                                </>
+                            )}
+                        </View>
+                    </>
+                );
+            })()}
         </View>
     );
 };
@@ -543,6 +675,25 @@ const styles = StyleSheet.create({
     expandedActions: {
         flexDirection: 'column',
     },
+    loadingState: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: THEME.COLOR.black,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        paddingHorizontal: 32,
+    },
+    loadingTitle: {
+        color: THEME.COLOR.white,
+        fontSize: 20,
+        fontWeight: '700',
+    },
+    loadingSubtitle: {
+        color: THEME.COLOR.neutral400,
+        fontSize: 14,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -557,6 +708,143 @@ const styles = StyleSheet.create({
     actionDivider: {
         height: 1,
         backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    arrivedBanner: {
+        position: 'absolute',
+        left: 16,
+        right: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: THEME.COLOR.black,
+        borderRadius: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(118,224,187,0.3)',
+        zIndex: 30,
+        elevation: 30,
+    },
+    arrivedBannerIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: THEME.COLOR.mint,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    arrivedBannerTitle: {
+        color: THEME.COLOR.white,
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    arrivedBannerSub: {
+        color: THEME.COLOR.neutral400,
+        fontSize: 13,
+        marginTop: 1,
+    },
+    arrivedBottomCard: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#111111',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 20,
+        paddingBottom: 36,
+        gap: 10,
+        zIndex: 30,
+        elevation: 30,
+        borderTopWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    nextDestLabel: {
+        color: THEME.COLOR.mint,
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 1.2,
+    },
+    nextDestName: {
+        color: THEME.COLOR.white,
+        fontSize: 26,
+        fontWeight: '800',
+        lineHeight: 32,
+    },
+    nextDestStats: {
+        flexDirection: 'row',
+        gap: 16,
+        marginTop: 2,
+    },
+    nextStatItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    nextStatText: {
+        color: THEME.COLOR.neutral400,
+        fontSize: 14,
+    },
+    squadRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 6,
+    },
+    squadPlaceholderAvatars: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    squadAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#111111',
+    },
+    squadAvatarText: {
+        color: THEME.COLOR.white,
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    squadEtaBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    squadEtaLabel: {
+        color: THEME.COLOR.mint,
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.8,
+    },
+    squadEtaList: {
+        paddingVertical: 8,
+        borderTopWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    squadEtaPlaceholder: {
+        color: THEME.COLOR.neutral500,
+        fontSize: 13,
+        fontStyle: 'italic',
+    },
+    startButton: {
+        marginTop: 4,
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 16,
+        paddingVertical: 16,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 6,
+    },
+    startButtonText: {
+        color: THEME.COLOR.black,
+        fontSize: 17,
+        fontWeight: '700',
     },
 });
 

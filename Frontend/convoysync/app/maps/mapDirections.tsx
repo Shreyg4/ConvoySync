@@ -50,6 +50,7 @@ const MapDirections = () => {
     const [legs, setLegs] = useState<any[]>([]);
     const [legIndex, setLegIndex] = useState(0);
     const [cardHeight, setCardHeight] = useState(0);
+    const [initialLocationReady, setInitialLocationReady] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -59,6 +60,7 @@ const MapDirections = () => {
             setDestinationLabel(draft.destinationLabel);
             setDestination(draft.destination);
             setStops(draft.stops);
+            if (draft.customOrigin) setInitialLocationReady(true);
         }, [])
     );
 
@@ -101,25 +103,27 @@ const MapDirections = () => {
             };
 
             setOrigin(currentLoc);
-
-            mapRef.current?.animateToRegion({
-                ...currentLoc,
-                latitudeDelta: 0.09,
-                longitudeDelta: 0.04,
-            }, 1000);
+            setInitialLocationReady(true);
         })();
     }, []);
 
+    const mapReady = initialLocationReady && activeOrigin;
+
     return (
         <View style={{ flex: 1 }}>
+            {mapReady ? (
             <MapView
                 ref={mapRef}
                 provider={PROVIDER_GOOGLE}
                 mapType="standard"
                 style={StyleSheet.absoluteFillObject}
+                initialRegion={{
+                    ...activeOrigin,
+                    latitudeDelta: 0.09,
+                    longitudeDelta: 0.04,
+                }}
                 showsUserLocation={locationGranted}
                 showsMyLocationButton={false}
-                followsUserLocation={true}
             >
                 {destination && (
                     <Marker coordinate={destination} title={destinationLabel}>
@@ -165,6 +169,7 @@ const MapDirections = () => {
                     />
                 )}
             </MapView>
+            ) : null}
 
             <SafeAreaView style={styles.overlay} pointerEvents="box-none">
                 <View style={styles.headerRow}>

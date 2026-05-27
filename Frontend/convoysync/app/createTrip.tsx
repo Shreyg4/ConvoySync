@@ -112,7 +112,7 @@ const CreateTrip = () => {
                         </>
                     )}
                 />
-                <HapticPressable onPress={handleSubmit((data) => console.log(data))} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
+                <HapticPressable onPress={handleSubmit((data) => { console.log(data); router.push('/tripInfo'); })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
                 </HapticPressable>
                 <HapticPressable
