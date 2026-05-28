@@ -294,8 +294,9 @@ const MapNavigation = () => {
         : activeStops.map(s => s.label);
     const routePoints = destination ? [destination, ...activeStops] : activeStops;
     const currentStep = legs[legIndex]?.steps?.[stepIndex];
-    const instruction = currentStep
-        ? stripHtml(currentStep.html_instructions)
+    const displayStep = legs[legIndex]?.steps?.[stepIndex + 1] ?? currentStep;
+    const instruction = displayStep
+        ? stripHtml(displayStep.html_instructions)
         : routePoints[currentDestIndex] ? 'Follow the route' : 'No route set';
     const distanceToTurn = distanceToNextTurn !== null ? formatDistanceToTurn(distanceToNextTurn) : '';
     const eta = remainingDuration > 0
@@ -398,7 +399,7 @@ const MapNavigation = () => {
             {!arrived && <View style={[styles.navCard, { top: navTop }]}>
                 <View style={styles.maneuverBox}>
                     <Ionicons
-                        name={getManeuverIcon(currentStep?.maneuver)}
+                        name={getManeuverIcon(displayStep?.maneuver)}
                         size={26}
                         color={THEME.COLOR.mint}
                     />
