@@ -4,9 +4,10 @@ import BackHeader from '../components/BackHeader';
 import { useForm, Controller } from 'react-hook-form';
 import { TextInput, Text, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
+import { useRouter } from 'expo-router'; // added by me
 
 const CreateTrip = () => {
     const { control, handleSubmit, setValue } = useForm({
@@ -16,11 +17,10 @@ const CreateTrip = () => {
             tripTime: '',
         },
     });
+    // const [parties, setParties] = useState(null);
 
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
-
-
 
     const showDatePicker = () => {
         setDatePickerVisibility(true);
@@ -39,6 +39,7 @@ const CreateTrip = () => {
     };
 
     const handleDateConfirm = (date: Date) => {
+        // CLARIFY: is there a need to convert to string?
         setValue('tripDate', date.toISOString());
         console.warn("A date has been picked: ", date);
         hideDatePicker();
@@ -49,6 +50,35 @@ const CreateTrip = () => {
         console.warn("A time has been picked: ", time);
         hideTimePicker();
     };
+
+    // My contribution:
+    const router = useRouter();
+    const userId = 1; // use id 1 for testing
+
+    const onSubmit = async (data: any) => {
+        try {
+            const response = await fetch(`http://192.168.1.129:8080/users/${userId}/parties`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            const text = await response.json();
+
+            if (!response.ok) {
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+
+            router.push('/home');
+
+        } catch (error) {
+            console.error('Network error:', error);
+        }
+    }
+
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <SafeAreaView style={globalStyles.container}>
@@ -110,7 +140,10 @@ const CreateTrip = () => {
                         </>
                     )}
                 />
-                <HapticPressable onPress={handleSubmit((data) => console.log(data))} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
+                {/* <HapticPressable onPress={handleSubmit((data) => console.log(data))} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
+                    <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
+                </HapticPressable> */}
+                <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
                 </HapticPressable>
             </SafeAreaView>

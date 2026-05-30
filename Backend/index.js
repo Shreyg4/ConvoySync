@@ -3,6 +3,7 @@ const express = require('express');
 require('dotenv').config();
 const prisma = require('./db');
 const bcrypt = require('bcrypt'); // for hashing
+const { TripStatus } = require('@prisma/client'); // enum
 
 const app = express();
 
@@ -87,12 +88,82 @@ app.get('/users/:userId', async (req, res) => {
       return res.status(404).json({
         error: "User not found",
       });
-    }
+    };
 
     res.status(200).json(user);
   } catch (error) {
       console.error("Database read error:", error);
       res.status(400).json({ error: "Could not get user account" });
+  }
+});
+
+// Create a party
+// NOTE: MODIFY/REPLACE THIS AFTER AUTH IS IMPLEMENTED
+app.post('/users/:userId/parties', async (req, res) => {
+  const id = parseInt(req.params.userId);
+  const { tripName, tripDate, tripTime } = req.body;
+
+  try {
+    const newParty = await prisma.party.create({
+      data: {
+        ownerId: id,
+        name: tripName,
+        inviteCode: "foobar"
+      },
+    });
+
+    // need to convert strings to an actual Date
+    const convertedDate = new Date(tripDate);
+    const convertedTime = new Date(tripTime);
+
+    const combinedDateTime = new Date(convertedDate);
+
+    combinedDateTime.setHours(
+      convertedTime.getHours(),
+      convertedTime.getMinutes(),
+      0,
+      0
+    );
+
+    const newTrip = await prisma.trip.create({
+      data: {
+        partyId: newParty.id,
+        estStart: combinedDateTime,
+        status: TripStatus.PLANNED
+      }
+    });
+
+    // probably need to add the user as a party member (even if they're the owner)
+    // for fetching what parties/trips a user belongs to.
+
+    res.status(201).json(newTrip);
+  } catch (error) {
+    console.error("Database write error:", error);
+    res.status(400).json({ error: "Could not create a party and trip" });
+  }
+});
+
+// same instructions as above
+app.get('/users/:userId/parties', async (req, res) => {
+  const id = parseInt(req.params.userId);
+
+  try {
+    const parties = await prisma.party.findMany({
+      where: {
+        ownerId: id
+      },
+    });
+
+    if (!parties) {
+      return res.status(404).json({
+        error: "Parties not found",
+      });
+    };
+
+    res.status(200).json(parties);
+  } catch (error) {
+    console.error("Database read error:", error);
+    res.status(400).json({ error: "Could not get parties" });
   }
 });
 
