@@ -12,6 +12,7 @@ export default function RootLayout() {
           <Stack.Screen name="index"/>
           <Stack.Screen name="(tabs)"/>
           <Stack.Screen name="createTrip"/>
+          <Stack.Screen name="tripInfo"/>
         </Stack>
         
         <MapButton />

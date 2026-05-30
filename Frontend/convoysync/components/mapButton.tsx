@@ -12,6 +12,7 @@ export default function MapButton() {
 
     return (
         <>
+            {/*
             <HapticPressable style={globalStyles.fab} hapticStyle="light" showVisualFeedback onPress={() => router.push('/maps/planner')}>
                 <Ionicons name="location" style={globalStyles.label} />
             </HapticPressable>
@@ -19,6 +20,7 @@ export default function MapButton() {
             <HapticPressable style={[globalStyles.fab, { right: 100 }]} hapticStyle="light" showVisualFeedback onPress={() => router.push('/maps/plannerSuggest')}>
                 <Ionicons name="person" style={globalStyles.label} />
             </HapticPressable>
+            */}
         </>
     );
 }
