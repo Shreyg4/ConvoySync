@@ -4,12 +4,15 @@ require('dotenv').config();
 const prisma = require('./db');
 const bcrypt = require('bcrypt'); // for hashing
 const jwt = require('jsonwebtoken');
+const passport = require('passport');
+const oauthRoutes = require('./oauth');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 const JWT_SECRET = process.env.JWT_SECRET
 
 //generate a token for the user
@@ -266,6 +269,8 @@ app.post('/parties', authenticateToken, async (req, res) => {
     res.status(500).json({ error: "Could not create party" });
   }
 });
+
+app.use('/oauth', oauthRoutes);
 
 
 
