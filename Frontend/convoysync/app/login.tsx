@@ -4,20 +4,48 @@ import { globalStyles } from '../styles/globalStyles';
 import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Login = () => {
     const { control, handleSubmit } = useForm({
         defaultValues: {
-            username: '',
+            email: '',
             password: '',
         },
     });
     const router = useRouter();
 
-    const onSubmit = (data: any) => {
+    const onSubmit = async (data: any) => {
         // proceed to home only when form is valid
-        router.push('/home');
+        try {
+            // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
+            const response = await fetch('http://192.168.1.136:8080/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            const text = await response.json();
+
+            if (!response.ok) {
+                // handle
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+
+            // Avoid doing this in actual production code.
+            await AsyncStorage.setItem("userId", String(text.id));
+
+            router.push('/home');
+
+        } catch (error) {
+            console.error('Network error:', error);
+        }
     };
+
     return (
         <SafeAreaView style={[globalStyles.container, { justifyContent: 'center' }]}>
             <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
@@ -26,7 +54,7 @@ const Login = () => {
                     <Text style={[globalStyles.title, { textAlign: 'center', marginBottom: 20 }]}>Login</Text>
                     <Controller
                         control={control}
-                        name="username"
+                        name="email"
                         rules={{ required: 'Username is required' }}
                         render={({ field: { onChange, value }, fieldState: { error } }) => (
                             <TextInput

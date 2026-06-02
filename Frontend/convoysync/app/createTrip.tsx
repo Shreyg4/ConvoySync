@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -51,6 +52,42 @@ const CreateTrip = () => {
         console.warn("A time has been picked: ", time);
         hideTimePicker();
     };
+
+    // My contribution:
+
+    const onSubmit = async (data: any) => {
+        const userId = await AsyncStorage.getItem("userId");
+
+        try {
+            const response = await fetch(`http://192.168.1.136:8080/users/${userId}/trips`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+            const text = await response.json();
+
+            if (!response.ok) {
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+
+            console.log(text);
+
+            router.push({
+                pathname: '/tripInfo',
+                params: {
+                    tripId: text.id,
+                },
+            });
+
+        } catch (error) {
+            console.error('Network error:', error);
+        }
+    }
+
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <SafeAreaView style={globalStyles.container}>
@@ -112,7 +149,7 @@ const CreateTrip = () => {
                         </>
                     )}
                 />
-                <HapticPressable onPress={handleSubmit((data) => { console.log(data); router.push('/tripInfo'); })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
+                <HapticPressable onPress={handleSubmit((data) => { onSubmit(data) })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
                 </HapticPressable>
                 <HapticPressable
