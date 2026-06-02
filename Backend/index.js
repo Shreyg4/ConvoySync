@@ -18,9 +18,9 @@ const JWT_SECRET = process.env.JWT_SECRET
 //generate a token for the user
 function generateToken(user) {
   return jwt.sign(
-    { 
-      userId: user.id, 
-      email: user.email 
+    {
+      userId: user.id,
+      email: user.email
     },
     JWT_SECRET,
     { expiresIn: '7d' } // Token expires in 7 days
@@ -31,24 +31,24 @@ function generateToken(user) {
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
- 
+
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
   }
- 
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, email: true, name: true, createdAt: true }
     });
- 
+
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
- 
+
     req.user = user;
     next();
   } catch (error) {
@@ -59,24 +59,24 @@ async function authenticateToken(req, res, next) {
 //POST: auth signup
 app.post('/auth/signup', async (req, res) => {
   const { email, name, password } = req.body;
- 
+
   // Validate input
   if (!email || !password || !name) {
-    return res.status(400).json({ 
-      error: 'Email, name, and password are required' 
+    return res.status(400).json({
+      error: 'Email, name, and password are required'
     });
   }
- 
+
   if (password.length < 8) {
-    return res.status(400).json({ 
-      error: 'Password must be at least 8 characters' 
+    return res.status(400).json({
+      error: 'Password must be at least 8 characters'
     });
   }
- 
+
   try {
     // Hash password
     const hash = await bcrypt.hash(password, 10);
- 
+
     // Create user
     const newUser = await prisma.user.create({
       data: {
@@ -91,10 +91,10 @@ app.post('/auth/signup', async (req, res) => {
         createdAt: true
       }
     });
- 
+
     // Generate JWT token
     const token = generateToken(newUser);
- 
+
     res.status(201).json({
       message: 'User created successfully',
       user: newUser,
@@ -102,12 +102,12 @@ app.post('/auth/signup', async (req, res) => {
     });
   } catch (error) {
     console.error("Signup error:", error);
-    
+
     // Handle duplicate email
     if (error.code === 'P2002') {
       return res.status(400).json({ error: "Email already exists" });
     }
-    
+
     res.status(400).json({ error: "Could not create user account" });
   }
 });
@@ -115,33 +115,33 @@ app.post('/auth/signup', async (req, res) => {
 //POST: auth login
 app.post('/auth/login', async (req, res) => {
   const { email, password } = req.body;
- 
+
   if (!email || !password) {
-    return res.status(400).json({ 
-      error: 'Email and password are required' 
+    return res.status(400).json({
+      error: 'Email and password are required'
     });
   }
- 
+
   try {
     // Find user by email
     const user = await prisma.user.findUnique({
       where: { email: email }
     });
- 
+
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
- 
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.pwHash);
- 
+
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
- 
+
     // Generate JWT token
     const token = generateToken(user);
- 
+
     res.json({
       message: 'Login successful',
       user: {
@@ -168,7 +168,7 @@ app.get('/auth/me', authenticateToken, async (req, res) => {
 //PUT: update user profile
 app.put('/auth/profile', authenticateToken, async (req, res) => {
   const { name } = req.body;
- 
+
   try {
     const updatedUser = await prisma.user.update({
       where: { id: req.user.id },
@@ -180,7 +180,7 @@ app.put('/auth/profile', authenticateToken, async (req, res) => {
         createdAt: true
       }
     });
- 
+
     res.json({
       message: 'Profile updated',
       user: updatedUser
@@ -214,7 +214,7 @@ app.get('/parties', authenticateToken, async (req, res) => {
         }
       }
     });
- 
+
     res.json({ parties });
   } catch (error) {
     console.error("Get parties error:", error);
@@ -225,15 +225,15 @@ app.get('/parties', authenticateToken, async (req, res) => {
 //POST: create party info
 app.post('/parties', authenticateToken, async (req, res) => {
   const { name } = req.body;
- 
+
   if (!name) {
     return res.status(400).json({ error: 'Party name is required' });
   }
- 
+
   try {
     // Generate unique invite code
     const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
- 
+
     const newParty = await prisma.party.create({
       data: {
         name: name,
@@ -259,7 +259,7 @@ app.post('/parties', authenticateToken, async (req, res) => {
         }
       }
     });
- 
+
     res.status(201).json({
       message: 'Party created',
       party: newParty
@@ -333,7 +333,7 @@ app.listen(PORT, () => {
   console.log(`Server is awake and listening on port ${PORT} at ${new Date().toLocaleString()} with available endpoints:
   POST   /auth/signup    - Create account
   POST   /auth/login     - Login
-  GET    /auth/me        - Get profile    (req auth) 
+  GET    /auth/me        - Get profile    (req auth)
   PUT    /auth/profile   - Update profile (req auth)
   GET    /parties        - Get parties    (req auth)
   POST   /parties        - Create party   (req auth)

@@ -1,9 +1,11 @@
-import { Text, TextInput, Image, KeyboardAvoidingView, ScrollView } from 'react-native'
+import { useState } from 'react';
+import { Text, TextInput, Image, KeyboardAvoidingView, ScrollView, View, ActivityIndicator, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles/globalStyles';
 import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
+import { signInWithProvider, OAuthProvider } from '../lib/oauth';
 
 const Login = () => {
     const { control, handleSubmit } = useForm({
@@ -13,11 +15,28 @@ const Login = () => {
         },
     });
     const router = useRouter();
+    const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
     const onSubmit = (data: any) => {
         // proceed to home only when form is valid
         router.push('/home');
     };
+
+    const handleOAuth = async (provider: OAuthProvider) => {
+        if (oauthLoading) return;
+        setOauthLoading(provider);
+        try {
+            const result = await signInWithProvider(provider);
+            if (result.ok) {
+                router.push('/home');
+            } else if (result.reason === 'error') {
+                Alert.alert('Sign-in failed', result.message || 'Please try again');
+            }
+        } finally {
+            setOauthLoading(null);
+        }
+    };
+
     return (
         <SafeAreaView style={[globalStyles.container, { justifyContent: 'center' }]}>
             <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
@@ -54,6 +73,37 @@ const Login = () => {
                     <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="light" showVisualFeedback>
                         <Text style={globalStyles.SubmitButtonText}>Login</Text>
                     </HapticPressable>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
+                        <View style={{ flex: 1, height: 1, backgroundColor: '#ccc' }} />
+                        <Text style={{ marginHorizontal: 12, color: '#888' }}>or</Text>
+                        <View style={{ flex: 1, height: 1, backgroundColor: '#ccc' }} />
+                    </View>
+
+                    <HapticPressable
+                        onPress={() => handleOAuth('google')}
+                        style={[globalStyles.SubmitButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', marginBottom: 12 }]}
+                        hapticStyle="light"
+                        showVisualFeedback
+                        disabled={oauthLoading !== null}
+                    >
+                        {oauthLoading === 'google'
+                            ? <ActivityIndicator color="#444" />
+                            : <Text style={[globalStyles.SubmitButtonText, { color: '#444' }]}>Continue with Google</Text>}
+                    </HapticPressable>
+
+                    <HapticPressable
+                        onPress={() => handleOAuth('github')}
+                        style={[globalStyles.SubmitButton, { backgroundColor: '#24292e' }]}
+                        hapticStyle="light"
+                        showVisualFeedback
+                        disabled={oauthLoading !== null}
+                    >
+                        {oauthLoading === 'github'
+                            ? <ActivityIndicator color="#fff" />
+                            : <Text style={[globalStyles.SubmitButtonText, { color: '#fff' }]}>Continue with GitHub</Text>}
+                    </HapticPressable>
+
                     <Link href="/register" asChild>
                         <HapticPressable hapticStyle="light" showVisualFeedback>
                             <Text style={[globalStyles.SubmitButtonText, { color: 'white', marginTop: 40, textAlign: 'center' }]}>{"Don't have an account? Register"}</Text>
@@ -66,4 +116,3 @@ const Login = () => {
 }
 
 export default Login;
-
