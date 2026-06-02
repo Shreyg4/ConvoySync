@@ -54,6 +54,9 @@ model Trip {
   status     TripStatus @default(PLANNED)
   createdAt  DateTime   @default(now())
 
+  startLocationId  Int?
+  startLocation   Location? @relation("TripStartLocation", fields: [startLocationId], references: [id])
+
   owner User @relation("TripOwner", fields: [ownerId], references: [id])
 
   members         TripMember[]
@@ -77,6 +80,7 @@ model Location {
   latitude  Float
   longitude Float
 
+  tripStarts      Trip[] @relation("TripStartLocation")
   stops           ItineraryStop[]
   rerouteRequests RerouteRequest[]
 }

@@ -8,6 +8,7 @@ import HapticPressable from '@/components/pressableCustomization';
 import { THEME } from '@/theme';
 import { getTripPlannerDraft } from './maps/tripPlannerStore';
 import { globalStyles } from '@/styles/globalStyles';
+import { useLocalSearchParams } from 'expo-router';
 
 type PartyMember = {
     id: string;
@@ -36,49 +37,108 @@ const createMemberInitials = (name: string) =>
         .slice(0, 2)
         .toUpperCase();
 
+type TripMember = {
+  userId: number;
+  role: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+};
+
+type TripData = {
+  id: number;
+  name: string;
+  estStart: string;
+  inviteCode: string;
+  members: TripMember[];
+  startLocation?: {
+    name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+  } | null;
+  itinerary?: {
+    stops: {
+      id: number;
+      stopOrder: number;
+      eta: string;
+      location: {
+        name: string;
+        address: string;
+        latitude: number;
+        longitude: number;
+      };
+    }[];
+  } | null;
+};
+
 const TripInfo = () => {
     const router = useRouter();
+    const { tripId } = useLocalSearchParams();
     const [itinerary, setItinerary] = useState<ItineraryItem[]>([]);
     const [hasRoute, setHasRoute] = useState(false);
+    const [trip, setTrip] = useState<TripData | null>(null);
 
     useFocusEffect(
         React.useCallback(() => {
-            const draft = getTripPlannerDraft();
-            const activeStops = draft.stops.filter((stop) => stop.latitude !== 0 || stop.longitude !== 0);
-            const nextItinerary: ItineraryItem[] = [];
+            if (!tripId) return;
 
-            if (draft.customOrigin && draft.originLabel && draft.originLabel !== 'Your Location') {
-                nextItinerary.push({
-                    id: 'origin',
-                    title: draft.originLabel,
-                    detail: 'Start Point',
-                });
-            }
+            const loadTrip = async () => {
+          try {
+              const response = await fetch(
+                  `http://192.168.1.136:8080/trips/${tripId}`
+              );
 
-            const totalStops = (draft.destination ? 1 : 0) + activeStops.length;
+              const data = await response.json();
 
-            if (draft.destination) {
-                nextItinerary.push({
-                    id: 'destination',
-                    title: draft.destinationLabel,
-                    detail: totalStops > 1 ? 'Stop 1' : 'Destination',
-                });
-            }
+              if (!response.ok) {
+                  console.log("status:", response.status);
+                  console.log("body:", data);
+                  return;
+              }
 
-            activeStops.forEach((stop, index) => {
-                nextItinerary.push({
-                    id: `stop-${index}`,
-                    title: stop.label,
-                    detail: `Stop ${totalStops > 1 ? index + 2 : index + 1}`,
-                });
-            });
+              setTrip(data);
 
-            setItinerary(nextItinerary);
-            setHasRoute(draft.destination !== null || activeStops.length > 0);
-        }, [])
+              const nextItinerary: ItineraryItem[] = [];
+
+              if (data.startLocation) {
+                  nextItinerary.push({
+                      id: "origin",
+                      title: data.startLocation.name,
+                      detail: "Start Point",
+                  });
+              }
+
+              const stops = data.itinerary?.stops ?? [];
+
+              stops.forEach((stop: any, index: number) => {
+                  nextItinerary.push({
+                      id: String(stop.id),
+                      title: stop.location.name,
+                      detail:
+                          index === stops.length - 1
+                              ? "Destination"
+                              : `Stop ${index + 1}`,
+                  });
+              });
+
+              setItinerary(nextItinerary);
+              setHasRoute(nextItinerary.length > 1);
+          } catch (error) {
+              console.error("Load trip error:", error);
+                }
+            };
+
+            loadTrip();
+        }, [tripId])
     );
 
-    const members = useMemo(() => TEMP_MEMBERS, []);
+    //TODO: implement hook (useEffect) to getch trip from tripId
+    //      display title, members, etc.
+
+    const members = trip?.members ?? [];
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -88,8 +148,14 @@ const TripInfo = () => {
                 </HapticPressable>
 
                 <View style={styles.hero}>
-                    <Text style={styles.tripTitle}>Weekend Convoy</Text>
-                    <Text style={styles.tripMeta}>TEMP TITLE · MAY 12, 2026 · 09:30 AM</Text>
+                    <Text style={styles.tripTitle}>{trip?.name ?? "Loading trip..."}</Text>
+                    <Text style={styles.tripMeta}>
+                        {trip
+                            ? `${new Date(trip.estStart).toLocaleDateString()} · ${new Date(
+                                trip.estStart
+                            ).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`
+                            : ""}
+                    </Text>
                 </View>
 
                 <View style={styles.sectionHeader}>
@@ -106,11 +172,13 @@ const TripInfo = () => {
                     contentContainerStyle={styles.memberRow}
                 >
                     {members.map((member) => (
-                        <View key={member.id} style={styles.memberCard}>
-                            <View style={[styles.memberAvatar, { borderColor: member.accent }]}>
-                                <Text style={styles.memberAvatarText}>{createMemberInitials(member.name)}</Text>
+                        <View key={member.userId} style={styles.memberCard}>
+                            <View style={[styles.memberAvatar, { borderColor: THEME.COLOR.mint }]}>
+                                <Text style={styles.memberAvatarText}>
+                                    {createMemberInitials(member.user.name)}
+                                </Text>
                             </View>
-                            <Text style={styles.memberName}>{member.name}</Text>
+                            <Text style={styles.memberName}>{member.user.name}</Text>
                         </View>
                     ))}
                 </ScrollView>
@@ -163,7 +231,12 @@ const TripInfo = () => {
                 <HapticPressable
                     hapticStyle="light"
                     style={globalStyles.AddButton}
-                    onPress={() => router.push('/maps/planner')}
+                    onPress={() => router.push({
+                        pathname: '/maps/planner',
+                        params: {
+                            tripId: tripId,
+                        },
+                    })}
                 >
                     <Text style={globalStyles.AddButtonText}><Ionicons name="add" size={15} color={THEME.COLOR.neutral500} /> Edit Itinerary</Text>
                 </HapticPressable>
