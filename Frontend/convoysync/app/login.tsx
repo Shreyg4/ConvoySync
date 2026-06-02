@@ -120,4 +120,26 @@ const Login = () => {
                     </HapticPressable>
 
                     <HapticPressable
-                        onPress=
+                        onPress={() => handleOAuth('github')}
+                        style={[globalStyles.SubmitButton, { backgroundColor: '#24292e' }]}
+                        hapticStyle="light"
+                        showVisualFeedback
+                        disabled={oauthLoading !== null}
+                    >
+                        {oauthLoading === 'github'
+                            ? <ActivityIndicator color="#fff" />
+                            : <Text style={[globalStyles.SubmitButtonText, { color: '#fff' }]}>Continue with GitHub</Text>}
+                    </HapticPressable>
+
+                    <Link href="/register" asChild>
+                        <HapticPressable hapticStyle="light" showVisualFeedback>
+                            <Text style={[globalStyles.SubmitButtonText, { color: 'white', marginTop: 40, textAlign: 'center' }]}>{"Don't have an account? Register"}</Text>
+                        </HapticPressable>
+                    </Link>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    )
+}
+
+export default Login;

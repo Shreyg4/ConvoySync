@@ -6,6 +6,7 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Register = () => {
     const { control, handleSubmit, setError } = useForm({
@@ -37,22 +38,24 @@ const Register = () => {
                     name: data.username,
                     password: data.password,
                 }),
-            })
+            });
 
             const text = await response.json();
 
             if (!response.ok) {
-                // handle
                 console.log('status:', response.status);
                 console.log('body:', text);
                 return;
             }
+
+            // Avoid doing this in actual production code.
+            await AsyncStorage.setItem("userId", String(text.id));
+
+            router.push('/home');
+
         } catch (error) {
             console.error('Network error:', error);
         }
-
-        // all good
-        router.push('/home');
     };
 
     const handleOAuth = async (provider: OAuthProvider) => {
