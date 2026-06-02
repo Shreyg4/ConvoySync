@@ -136,7 +136,7 @@ const Planner = () => {
         const loadItineraryStops = async () => {
             try {
                 const response = await fetch(
-                    `http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`
+                    `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
                 );
 
                 const data = await response.json();
