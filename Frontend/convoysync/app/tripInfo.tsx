@@ -158,6 +158,13 @@ const TripInfo = () => {
                     </Text>
                 </View>
 
+                <View style={styles.inviteCodeCard}>
+                    <Text style={styles.inviteCodeLabel}>Invite Code</Text>
+                    <Text style={styles.inviteCodeValue}>
+                        {trip?.inviteCode ?? "Loading..."}
+                    </Text>
+                </View>
+
                 <View style={styles.sectionHeader}>
                     <View style={styles.sectionTitleRow}>
                         <Ionicons name="people-outline" size={15} color={THEME.COLOR.sky} />
@@ -488,6 +495,30 @@ const styles = StyleSheet.create({
     },
     startButtonTextDisabled: {
         color: THEME.COLOR.neutral500,
+    },
+    inviteCodeCard: {
+        backgroundColor: '#232225',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: THEME.SPACING.md,
+        paddingHorizontal: THEME.SPACING.lg,
+        marginBottom: THEME.SPACING.lg,
+        alignItems: 'center',
+    },
+    inviteCodeLabel: {
+        color: THEME.COLOR.neutral500,
+        fontSize: THEME.FONT_SIZE.xs,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 4,
+    },
+    inviteCodeValue: {
+        color: THEME.COLOR.mint,
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: 3,
     },
 });
 
