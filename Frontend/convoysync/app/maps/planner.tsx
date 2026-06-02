@@ -22,6 +22,7 @@ import {
     subscribeSuggestions,
     CURRENT_USER,
 } from './suggestionStore';
+import { useLocalSearchParams } from 'expo-router';
 
 // Replace with real role from auth/trip context once backend is wired up
 const IS_PARTY_LEADER = false;
@@ -42,6 +43,70 @@ const Planner = () => {
     const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
     const [suggestions, setSuggestions] = useState<Suggestion[]>(getSuggestions());
 
+    // my contributions: //
+    // need an array for storing stops (stop order + eta?)
+    // need to store location data in a stop
+
+    const { tripId } = useLocalSearchParams();
+
+    type Location = {
+        name: string,
+        address: string,
+        lat: number,
+        long: number,
+    }
+
+    type Stop = {
+        order: number,
+        location: Location,
+        eta: string,
+    }
+
+    const [myStops, setMyStops] = useState<Stop[]>([]);
+
+    // NOTE: DOES NOT PROTECT AGAINST DUPLICATE LOCATIONS CURRENTLY
+    const onSubmit = async () => {
+        try {
+        const response = await fetch(`http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                startLocation: customOrigin ? {
+                    name: originLabel,
+                    address: originLabel,
+                    lat: customOrigin.latitude,
+                    long: customOrigin.longitude,
+                } : null,
+                    stops: myStops
+                }),
+        });
+
+        const text = await response.json();
+
+            if (!response.ok) {
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+
+            // router.push({
+            //     pathname: '/tripInfo',
+            //     params: {
+            //         tripId: data.trip.id,
+            //     },
+            // });
+            console.log(myStops);
+
+        } catch (error) {
+            console.error('Network error:', error);
+        }
+
+    }
+
+    // end my contributions // 
+
     useEffect(() => {
         return subscribeSuggestions(() => setSuggestions(getSuggestions()));
     }, []);
@@ -52,7 +117,7 @@ const Planner = () => {
         setCustomOrigin(draft.customOrigin);
         setDestinationLabel(draft.destinationLabel);
         setDestination(draft.destination);
-        setStops(draft.stops);
+        // setStops(draft.stops);
     }, []);
 
     useEffect(() => {
@@ -65,52 +130,162 @@ const Planner = () => {
         });
     }, [customOrigin, destination, destinationLabel, originLabel, stops]);
 
+    useEffect(() => {
+        if (!tripId) return;
+
+        const loadItineraryStops = async () => {
+            try {
+                const response = await fetch(
+                    `http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.log("status:", response.status);
+                    console.log("body:", data);
+                    return;
+                }
+
+                if (data.startLocation) {
+                    setCustomOrigin({
+                        latitude: data.startLocation.latitude,
+                        longitude: data.startLocation.longitude,
+                    });
+
+                    setOriginLabel(data.startLocation.name);
+                }
+
+                const loadedMyStops: Stop[] = data.stops.map((stop: any) => ({
+                    order: stop.stopOrder,
+                    eta: stop.eta,
+                    location: {
+                        name: stop.location.name,
+                        address: stop.location.address,
+                        lat: stop.location.latitude,
+                        long: stop.location.longitude,
+                    },
+                }));
+
+                const loadedRouteStops: RouteStop[] = data.stops.map((stop: any) => ({
+                    latitude: stop.location.latitude,
+                    longitude: stop.location.longitude,
+                    label: stop.location.name,
+                }));
+
+                setMyStops(loadedMyStops);
+
+                const [loadedDestination, ...loadedExtraStops] = loadedRouteStops;
+
+                if (loadedDestination) {
+                    setDestination({
+                        latitude: loadedDestination.latitude,
+                        longitude: loadedDestination.longitude,
+                    });
+                    setDestinationLabel(loadedDestination.label);
+                }
+
+                setStops(loadedExtraStops);
+            } catch (error) {
+                console.error("Load itinerary stops error:", error);
+            }
+        };
+
+        loadItineraryStops();
+    }, [tripId]);
+
     useFocusEffect(
-        useCallback(() => {
-            const selectedPlace = consumeSelectedMapPlace();
-            if (!selectedPlace || !selectionTarget) {
-                return;
-            }
+  useCallback(() => {
+    const selectedPlace = consumeSelectedMapPlace();
 
-            const nextLabel = selectedPlace.description || '';
+    if (!selectedPlace || !selectionTarget) {
+      return;
+    }
 
-            if (selectionTarget.kind === 'origin') {
-                setCustomOrigin({
-                    latitude: selectedPlace.latitude,
-                    longitude: selectedPlace.longitude,
-                });
-                setOriginLabel(nextLabel || 'Your Location');
-            }
+    const nextLabel = selectedPlace.description || "";
 
-            if (selectionTarget.kind === 'destination') {
-                setDestination({
-                    latitude: selectedPlace.latitude,
-                    longitude: selectedPlace.longitude,
-                });
-                setDestinationLabel(nextLabel || 'Destination');
-            }
+    const newBackendStop = {
+      location: {
+        name: selectedPlace.description ?? "Unknown location",
+        address: selectedPlace.description ?? "Unknown address",
+        lat: selectedPlace.latitude,
+        long: selectedPlace.longitude,
+      },
+      eta: new Date().toISOString(),
+    };
 
-            if (selectionTarget.kind === 'stop') {
-                setStops((currentStops) => {
-                    const nextStop = {
-                        latitude: selectedPlace.latitude,
-                        longitude: selectedPlace.longitude,
-                        label: nextLabel || 'Stop',
-                    };
+    if (selectionTarget.kind === "origin") {
+      setCustomOrigin({
+        latitude: selectedPlace.latitude,
+        longitude: selectedPlace.longitude,
+      });
 
-                    if (selectionTarget.stopIndex >= currentStops.length) {
-                        return [...currentStops, nextStop];
-                    }
+      setOriginLabel(nextLabel || "Your Location");
+    }
 
-                    const updatedStops = [...currentStops];
-                    updatedStops[selectionTarget.stopIndex] = nextStop;
-                    return updatedStops;
-                });
-            }
+    if (selectionTarget.kind === "destination") {
+      setDestination({
+        latitude: selectedPlace.latitude,
+        longitude: selectedPlace.longitude,
+      });
 
-            setSelectionTarget(null);
-        }, [selectionTarget])
-    );
+      setDestinationLabel(nextLabel || "Destination");
+
+      setMyStops((prev) => {
+        const withoutOldDestination = prev.filter((stop) => stop.order !== 1);
+
+        return [
+          {
+            order: 1,
+            ...newBackendStop,
+          },
+          ...withoutOldDestination.map((stop, index) => ({
+            ...stop,
+            order: index + 2,
+          })),
+        ];
+      });
+    }
+
+    if (selectionTarget.kind === "stop") {
+      setStops((currentStops) => {
+        const nextStop = {
+          latitude: selectedPlace.latitude,
+          longitude: selectedPlace.longitude,
+          label: nextLabel || "Stop",
+        };
+
+        if (selectionTarget.stopIndex >= currentStops.length) {
+          return [...currentStops, nextStop];
+        }
+
+        const updatedStops = [...currentStops];
+        updatedStops[selectionTarget.stopIndex] = nextStop;
+        return updatedStops;
+      });
+
+      setMyStops((prev) => {
+        const next = [...prev];
+
+        const backendIndex = selectionTarget.stopIndex + 1;
+
+        next[backendIndex] = {
+          order: backendIndex + 1,
+          ...newBackendStop,
+        };
+
+        return next
+          .filter(Boolean)
+          .map((stop, index) => ({
+            ...stop,
+            order: index + 1,
+          }));
+      });
+    }
+
+    setSelectionTarget(null);
+  }, [selectionTarget])
+);
 
     const openSearchScreen = useCallback((target: RouteSelectionTarget) => {
         setSelectionTarget(target);
@@ -150,9 +325,23 @@ const Planner = () => {
     }, [destination, openSearchScreen, stops.length]);
 
     const deleteStop = useCallback((stopIndex: number) => {
-        setStops((currentStops) => currentStops.filter((_, index) => index !== stopIndex));
+        setStops((currentStops) =>
+            currentStops.filter((_, index) => index !== stopIndex)
+        );
+
+        setMyStops((currentMyStops) =>
+            currentMyStops
+                .filter((stop) => stop.order !== stopIndex + 2)
+                .map((stop, index) => ({
+                    ...stop,
+                    order: index + 1,
+                }))
+        );
+
         setSelectionTarget((currentTarget) =>
-            currentTarget?.kind === 'stop' && currentTarget.stopIndex === stopIndex ? null : currentTarget
+            currentTarget?.kind === 'stop' && currentTarget.stopIndex === stopIndex
+                ? null
+                : currentTarget
         );
     }, []);
 
@@ -166,15 +355,21 @@ const Planner = () => {
                     longitude: nextDestination.longitude,
                 });
                 setDestinationLabel(nextDestination.label);
-                return remainingStops;
+            } else {
+                setDestination(null);
+                setDestinationLabel('Choose destination');
             }
 
-            setDestination(null);
-            setDestinationLabel('Choose destination');
-            return currentStops;
+            return remainingStops;
         });
-        setSelectionTarget((currentTarget) =>
-            currentTarget?.kind === 'destination' ? null : currentTarget
+
+        setMyStops((currentMyStops) =>
+            currentMyStops
+                .slice(1)
+                .map((stop, index) => ({
+                    ...stop,
+                    order: index + 1,
+                }))
         );
     }, []);
 
@@ -309,7 +504,7 @@ const Planner = () => {
                     <HapticPressable
                         hapticStyle="medium"
                         disabled={!hasRoute}
-                        onPress={() => {}}
+                        onPress={onSubmit}
                         style={styles.saveTripPressable}
                     >
                         <View style={[styles.saveTripButton, !hasRoute && styles.saveTripButtonDisabled]}>

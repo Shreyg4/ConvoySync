@@ -6,20 +6,47 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Login = () => {
     const { control, handleSubmit } = useForm({
         defaultValues: {
-            username: '',
+            email: '',
             password: '',
         },
     });
     const router = useRouter();
     const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
-    const onSubmit = (data: any) => {
+    const onSubmit = async (data: any) => {
         // proceed to home only when form is valid
-        router.push('/home');
+        try {
+            // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
+            const response = await fetch('http://192.168.1.136:8080/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+
+            const text = await response.json();
+
+            if (!response.ok) {
+                // handle
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+
+            // Avoid doing this in actual production code.
+            await AsyncStorage.setItem("userId", String(text.id));
+
+            router.push('/home');
+
+        } catch (error) {
+            console.error('Network error:', error);
+        }
     };
 
     const handleOAuth = async (provider: OAuthProvider) => {
@@ -45,7 +72,7 @@ const Login = () => {
                     <Text style={[globalStyles.title, { textAlign: 'center', marginBottom: 20 }]}>Login</Text>
                     <Controller
                         control={control}
-                        name="username"
+                        name="email"
                         rules={{ required: 'Username is required' }}
                         render={({ field: { onChange, value }, fieldState: { error } }) => (
                             <TextInput
@@ -93,26 +120,4 @@ const Login = () => {
                     </HapticPressable>
 
                     <HapticPressable
-                        onPress={() => handleOAuth('github')}
-                        style={[globalStyles.SubmitButton, { backgroundColor: '#24292e' }]}
-                        hapticStyle="light"
-                        showVisualFeedback
-                        disabled={oauthLoading !== null}
-                    >
-                        {oauthLoading === 'github'
-                            ? <ActivityIndicator color="#fff" />
-                            : <Text style={[globalStyles.SubmitButtonText, { color: '#fff' }]}>Continue with GitHub</Text>}
-                    </HapticPressable>
-
-                    <Link href="/register" asChild>
-                        <HapticPressable hapticStyle="light" showVisualFeedback>
-                            <Text style={[globalStyles.SubmitButtonText, { color: 'white', marginTop: 40, textAlign: 'center' }]}>{"Don't have an account? Register"}</Text>
-                        </HapticPressable>
-                    </Link>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    )
-}
-
-export default Login;
+                        onPress=

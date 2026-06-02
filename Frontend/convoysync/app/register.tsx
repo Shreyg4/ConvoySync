@@ -19,11 +19,38 @@ const Register = () => {
     const router = useRouter();
     const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
-    const onSubmit = (data: any) => {
+    const onSubmit = async (data: any) => {
         if (data.password !== data.confirmPassword) {
             setError('confirmPassword', { type: 'validate', message: 'Passwords do not match' });
             return;
         }
+
+        try {
+            // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
+            const response = await fetch('http://192.168.1.136:8080/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: data.email,
+                    name: data.username,
+                    password: data.password,
+                }),
+            })
+
+            const text = await response.json();
+
+            if (!response.ok) {
+                // handle
+                console.log('status:', response.status);
+                console.log('body:', text);
+                return;
+            }
+        } catch (error) {
+            console.error('Network error:', error);
+        }
+
         // all good
         router.push('/home');
     };
