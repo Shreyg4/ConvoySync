@@ -7,6 +7,7 @@ import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiUrl } from '../lib/api';
 
 const Register = () => {
     const { control, handleSubmit, setError } = useForm({
@@ -28,7 +29,7 @@ const Register = () => {
 
         try {
             // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
-            const response = await fetch('http://192.168.1.136:8080/users', {
+            const response = await fetch(apiUrl('/users'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

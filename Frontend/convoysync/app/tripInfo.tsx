@@ -9,6 +9,7 @@ import { THEME } from '@/theme';
 import { getTripPlannerDraft } from './maps/tripPlannerStore';
 import { globalStyles } from '@/styles/globalStyles';
 import { useLocalSearchParams } from 'expo-router';
+import { apiUrl } from '@/lib/api';
 
 type PartyMember = {
     id: string;
@@ -88,7 +89,7 @@ const TripInfo = () => {
             const loadTrip = async () => {
           try {
               const response = await fetch(
-                  `http://192.168.1.136:8080/trips/${tripId}`
+                  apiUrl(`/trips/${tripId}`)
               );
 
               const data = await response.json();

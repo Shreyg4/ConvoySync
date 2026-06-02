@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
+import { apiUrl } from '../lib/api';
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -57,7 +58,7 @@ const CreateTrip = () => {
 
     const onSubmit = async (data: any) => {
         try {
-            const response = await fetch(`http://192.168.1.136:8080/users/${userId}/trips`, {
+            const response = await fetch(apiUrl(`/users/${userId}/trips`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

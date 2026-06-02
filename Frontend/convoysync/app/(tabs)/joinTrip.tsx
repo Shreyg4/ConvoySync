@@ -5,6 +5,7 @@ import { globalStyles } from '../../styles/globalStyles';
 import HapticPressable from '../../components/pressableCustomization';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from 'expo-router';
+import { apiUrl } from '../../lib/api';
 
 const JoinTrip = () => {
     const [code, setCode] = useState('');
@@ -18,7 +19,7 @@ const JoinTrip = () => {
             return;
         }
 
-        const response = await fetch(`http://192.168.1.136:8080/trips/join`, {
+        const response = await fetch(apiUrl(`/trips/join`), {
             method: 'POST',
             headers: {
                     'Content-Type': 'application/json',

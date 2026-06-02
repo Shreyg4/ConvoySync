@@ -23,6 +23,7 @@ import {
     CURRENT_USER,
 } from './suggestionStore';
 import { useLocalSearchParams } from 'expo-router';
+import { apiUrl } from '../../lib/api';
 
 // Replace with real role from auth/trip context once backend is wired up
 const IS_PARTY_LEADER = false;
@@ -67,7 +68,7 @@ const Planner = () => {
     // NOTE: DOES NOT PROTECT AGAINST DUPLICATE LOCATIONS CURRENTLY
     const onSubmit = async () => {
         try {
-        const response = await fetch(`http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`, {
+        const response = await fetch(apiUrl(`/trips/${tripId}/itinerary/stops`), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -136,7 +137,7 @@ const Planner = () => {
         const loadItineraryStops = async () => {
             try {
                 const response = await fetch(
-                    `http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`
+                    apiUrl(`/trips/${tripId}/itinerary/stops`)
                 );
 
                 const data = await response.json();
