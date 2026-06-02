@@ -59,7 +59,7 @@ const CreateTrip = () => {
         const userId = await AsyncStorage.getItem("userId");
 
         try {
-            const response = await fetch(`http://192.168.1.136:8080/users/${userId}/trips`, {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

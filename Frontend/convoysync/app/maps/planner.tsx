@@ -67,7 +67,7 @@ const Planner = () => {
     // NOTE: DOES NOT PROTECT AGAINST DUPLICATE LOCATIONS CURRENTLY
     const onSubmit = async () => {
         try {
-        const response = await fetch(`http://192.168.1.136:8080/trips/${tripId}/itinerary/stops`, {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

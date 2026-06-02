@@ -19,7 +19,7 @@ const Login = () => {
         // proceed to home only when form is valid
         try {
             // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
-            const response = await fetch('http://192.168.1.136:8080/auth/login', {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

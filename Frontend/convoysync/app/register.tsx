@@ -24,7 +24,7 @@ const Register = () => {
 
         try {
             // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
-            const response = await fetch('http://192.168.1.136:8080/users', {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

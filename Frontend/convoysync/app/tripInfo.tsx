@@ -88,7 +88,7 @@ const TripInfo = () => {
             const loadTrip = async () => {
           try {
               const response = await fetch(
-                  `http://192.168.1.136:8080/trips/${tripId}`
+                  `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}`
               );
 
               const data = await response.json();

@@ -35,7 +35,7 @@ const home = () => {
                     }
 
                     const response = await fetch(
-                        `http://192.168.1.136:8080/users/${userId}/trips`
+                        `${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`
                     );
 
                     const data = await response.json();
