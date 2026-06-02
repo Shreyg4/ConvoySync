@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -53,9 +54,10 @@ const CreateTrip = () => {
     };
 
     // My contribution:
-    const userId = 1; // use id 1 for testing
 
     const onSubmit = async (data: any) => {
+        const userId = await AsyncStorage.getItem("userId");
+
         try {
             const response = await fetch(`http://192.168.1.136:8080/users/${userId}/trips`, {
                 method: 'POST',
