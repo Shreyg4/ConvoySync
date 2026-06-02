@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import { ScrollView } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback } from 'react';
+import { apiUrl } from '../../lib/api';
 
 type Trip = {
     id: number;
@@ -35,7 +36,7 @@ const home = () => {
                     }
 
                     const response = await fetch(
-                        `http://192.168.1.136:8080/users/${userId}/trips`
+                        apiUrl(`/users/${userId}/trips`)
                     );
 
                     const data = await response.json();
