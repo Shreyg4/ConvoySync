@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt'); // for hashing
 const jwt = require('jsonwebtoken');
 const passport = require('passport');
 const oauthRoutes = require('./oauth');
+const { TripStatus } = require('@prisma/client'); // enum
 
 const app = express();
 
@@ -191,91 +192,9 @@ app.put('/auth/profile', authenticateToken, async (req, res) => {
   }
 });
 
-//GET: get party info
-app.get('/parties', authenticateToken, async (req, res) => {
-  try {
-    const parties = await prisma.party.findMany({
-      where: {
-        OR: [
-          { ownerId: req.user.id },
-          { members: { some: { userId: req.user.id } } }
-        ]
-      },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        }
-      }
-    });
-
-    res.json({ parties });
-  } catch (error) {
-    console.error("Get parties error:", error);
-    res.status(500).json({ error: "Could not fetch parties" });
-  }
-});
-
-//POST: create party info
-app.post('/parties', authenticateToken, async (req, res) => {
-  const { name } = req.body;
-
-  if (!name) {
-    return res.status(400).json({ error: 'Party name is required' });
-  }
-
-  try {
-    // Generate unique invite code
-    const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-
-    const newParty = await prisma.party.create({
-      data: {
-        name: name,
-        ownerId: req.user.id,
-        inviteCode: inviteCode,
-        members: {
-          create: {
-            userId: req.user.id,
-            role: 'owner'
-          }
-        }
-      },
-      include: {
-        owner: {
-          select: { id: true, name: true, email: true }
-        },
-        members: {
-          include: {
-            user: {
-              select: { id: true, name: true, email: true }
-            }
-          }
-        }
-      }
-    });
-
-    res.status(201).json({
-      message: 'Party created',
-      party: newParty
-    });
-  } catch (error) {
-    console.error("Create party error:", error);
-    res.status(500).json({ error: "Could not create party" });
-  }
-});
-
+// OAuth routes (Google / GitHub)
 app.use('/oauth', oauthRoutes);
 
-
-
-
-// Stafford's user system
 // POST: create a user
 app.post('/users', async (req, res) => {
   const { email, name, password } = req.body;
@@ -292,8 +211,14 @@ app.post('/users', async (req, res) => {
 
     res.status(201).json(newUser);
   } catch (error) {
-      console.error("Database write error:", error);
-      res.status(400).json({ error: "Could not create user account" });
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        error: 'Email already tied to an existing account',
+      });
+    }
+
+    console.error("Database write error:", error);
+    res.status(400).json({ error: "Could not create user account" });
   }
 });
 
@@ -311,7 +236,7 @@ app.get('/users/:userId', async (req, res) => {
       return res.status(404).json({
         error: "User not found",
       });
-    }
+    };
 
     res.status(200).json(user);
   } catch (error) {
@@ -320,22 +245,133 @@ app.get('/users/:userId', async (req, res) => {
   }
 });
 
+// POST: create a trip (party)
+// NOTE: MODIFY/REPLACE THIS AFTER AUTH IS IMPLEMENTED
+app.post('/users/:userId/trips', async (req, res) => {
+  const id = parseInt(req.params.userId);
+  const { tripName, tripDate, tripTime } = req.body;
+
+  // need to convert strings to an actual Date
+  const convertedDate = new Date(tripDate);
+  const convertedTime = new Date(tripTime);
+
+  const combinedDateTime = new Date(convertedDate);
+
+  combinedDateTime.setHours(
+    convertedTime.getHours(),
+    convertedTime.getMinutes(),
+    0,
+    0
+  );
+
+  function generateInviteCode(length = 8) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let code = "";
+
+    for (let i = 0; i < length; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+
+    return code;
+  }
+
+  try {
+    let newTrip;
+
+    // if unique constraint fails, try again
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const code = generateInviteCode();
+
+      try {
+        newTrip = await prisma.trip.create({
+          data: {
+            ownerId: id,
+            name: tripName,
+            inviteCode: code,
+            estStart: combinedDateTime,
+          }
+        });
+
+        // need to add user as a "TripMember" for this trip
+        const newTripMember = await prisma.tripMember.create({
+          data: {
+            tripId: newTrip.id,
+            userId: id,
+            role: "owner"
+          }
+        });
+
+        return res.status(201).json({
+          trip: newTrip,
+          member: newTripMember,
+        });
+      } catch (error) {
+        if (error.code == "P2002") {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    return res.status(500).json({
+      error: "Could not generate unique invite code",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({
+      error: "Could not create trip",
+    });
+  }
+});
+
+// GET: list a user's trips
+app.get('/users/:userId/trips', async (req, res) => {
+  const id = parseInt(req.params.userId);
+
+  try {
+    const trips = await prisma.trip.findMany({
+      where: {
+        members: {
+          some: {
+            userId: id,
+          }
+        }
+      },
+    });
+
+    if (!trips) {
+      return res.status(404).json({
+        error: "Trips not found",
+      });
+    };
+
+    res.status(200).json(trips);
+  } catch (error) {
+    console.error("Database read error:", error);
+    res.status(400).json({ error: "Could not get trips" });
+  }
+});
+
 // A simple test route
 app.get('/', (req, res) => {
   res.send('ConvoySync Backend is successfully running!');
 });
 
-// Render dynamically assigns a port, so we must use process.env.PORT
-// const PORT = process.env.PORT || 10000;
-const PORT = 8080;
+// Render dynamically assigns a port via process.env.PORT; fall back to 8080 locally.
+const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
   console.log(`Server is awake and listening on port ${PORT} at ${new Date().toLocaleString()} with available endpoints:
-  POST   /auth/signup    - Create account
-  POST   /auth/login     - Login
-  GET    /auth/me        - Get profile    (req auth)
-  PUT    /auth/profile   - Update profile (req auth)
-  GET    /parties        - Get parties    (req auth)
-  POST   /parties        - Create party   (req auth)
+  POST   /auth/signup           - Create account
+  POST   /auth/login            - Login
+  GET    /auth/me               - Get profile        (req auth)
+  PUT    /auth/profile          - Update profile      (req auth)
+  GET    /oauth/google          - Google OAuth start
+  GET    /oauth/github          - GitHub OAuth start
+  POST   /users                 - Create user
+  GET    /users/:userId         - Get user
+  POST   /users/:userId/trips   - Create trip
+  GET    /users/:userId/trips   - List user trips
   `);
 });

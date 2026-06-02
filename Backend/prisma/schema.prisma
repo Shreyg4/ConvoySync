@@ -18,35 +18,24 @@ model User {
   pwHash    String
   createdAt DateTime @default(now())
 
-  parties         Party[]
-  inParty         PartyMember[]
+  ownedTrips Trip[]       @relation("TripOwner")
+  inTrips    TripMember[]
+
   tripStatuses    MemberTripStatus[]
   rerouteRequests RerouteRequest[]
   rerouteVotes    RerouteVote[]
 }
 
-model Party {
-  id         Int      @id @default(autoincrement())
-  owner      User     @relation(fields: [ownerId], references: [id])
-  ownerId    Int
-  name       String
-  inviteCode String   @unique
-  createdAt  DateTime @default(now())
-
-  members PartyMember[]
-  trips   Trip[]
-}
-
-model PartyMember {
-  partyId  Int
+model TripMember {
+  tripId   Int
   userId   Int
   role     String
   joinedAt DateTime @default(now())
 
-  party Party @relation(fields: [partyId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
+  trip Trip @relation(fields: [tripId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
-  @@id([partyId, userId])
+  @@id([tripId, userId])
 }
 
 enum TripStatus {
@@ -57,15 +46,18 @@ enum TripStatus {
 }
 
 model Trip {
-  id    Int   @id @default(autoincrement())
-  party Party @relation(fields: [partyId], references: [id])
+  id         Int        @id @default(autoincrement())
+  ownerId    Int
+  name       String
+  inviteCode String     @unique
+  estStart   DateTime
+  status     TripStatus @default(PLANNED)
+  createdAt  DateTime   @default(now())
 
-  partyId   Int
-  estStart  DateTime
-  status    TripStatus @default(PLANNED)
-  createdAt DateTime   @default(now())
-  itinerary Itinerary?
+  owner User @relation("TripOwner", fields: [ownerId], references: [id])
 
+  members         TripMember[]
+  itinerary       Itinerary?
   memberStatuses  MemberTripStatus[]
   rerouteRequests RerouteRequest[]
 }
