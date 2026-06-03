@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
@@ -14,8 +14,8 @@ import { setNavState } from './navigationStore';
 import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-const ADVANCE_THRESHOLD_METERS = 30;
-const ARRIVAL_THRESHOLD_METERS = 50;
+const ADVANCE_THRESHOLD_METERS = 40;
+const ARRIVAL_THRESHOLD_METERS = 120;
 const HEADING_CAMERA_DELAY_MS = 450;
 
 const getManeuverIcon = (maneuver?: string): any => {
@@ -101,7 +101,6 @@ const MapNavigation = () => {
     const arrivedRef = useRef(false);
     const [currentDestIndex, setCurrentDestIndex] = useState(0);
     const currentDestIndexRef = useRef(0);
-    const [squadExpanded, setSquadExpanded] = useState(false);
     const routeDestinationRef = useRef<{ latitude: number; longitude: number } | null>(null);
     const [routeStartOrigin, setRouteStartOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const routeStartOriginSetRef = useRef(false);
@@ -210,6 +209,21 @@ const MapNavigation = () => {
         routeDestinationRef.current = pts[currentDestIndex] ?? null;
     }, [destination, stops, currentDestIndex]);
 
+    // Redundant arrival check run after every liveLocation state commit.
+    // Guards against iOS timing where the GPS callback fires while routeDestinationRef
+    // is still null, causing the in-callback check to silently skip.
+    useEffect(() => {
+        if (!liveLocation || arrivedRef.current || !routeDestinationRef.current) return;
+        const dist = haversine(
+            liveLocation.latitude, liveLocation.longitude,
+            routeDestinationRef.current.latitude, routeDestinationRef.current.longitude
+        );
+        if (dist < ARRIVAL_THRESHOLD_METERS) {
+            arrivedRef.current = true;
+            setArrived(true);
+        }
+    }, [liveLocation]);
+
     useFocusEffect(
         React.useCallback(() => {
             setFollowing(true);
@@ -270,8 +284,8 @@ const MapNavigation = () => {
             sub = await Location.watchPositionAsync(
                 {
                     accuracy: Location.Accuracy.BestForNavigation,
-                    timeInterval: 1000,
-                    distanceInterval: 2,
+                    timeInterval: 500,
+                    distanceInterval: 1,
                 },
                 ({ coords }) => {
                     const { latitude, longitude } = coords;
@@ -501,10 +515,6 @@ const MapNavigation = () => {
                                     <Text style={styles.actionButtonText}>Directions</Text>
                                 </HapticPressable>
                                 <View style={styles.actionDivider} />
-                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => {}}>
-                                    <Ionicons name="git-branch" size={20} color="#4285F4" />
-                                    <Text style={[styles.actionButtonText, { color: '#4285F4' }]}>Suggest Reroute</Text>
-                                </HapticPressable>
                             </View>
 
                         </View>
@@ -547,34 +557,6 @@ const MapNavigation = () => {
                                 <>
                                     <Text style={styles.nextDestLabel}>NEXT DESTINATION</Text>
                                     <Text style={styles.nextDestName} numberOfLines={1} ellipsizeMode="tail">{nextLabel}</Text>
-                                    {/* Squad ETAs — placeholder until backend is wired */}
-                                    <View style={styles.squadRow}>
-                                        <View style={styles.squadPlaceholderAvatars}>
-                                            {['D', 'A', 'S'].map((init, i) => (
-                                                <View
-                                                    key={i}
-                                                    style={[
-                                                        styles.squadAvatar,
-                                                        { marginLeft: i > 0 ? -8 : 0 },
-                                                        i === 0 && { backgroundColor: '#9333ea' },
-                                                        i === 1 && { backgroundColor: '#16a34a' },
-                                                        i === 2 && { backgroundColor: '#dc2626' },
-                                                    ]}
-                                                >
-                                                    <Text style={styles.squadAvatarText}>{init}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                        <HapticPressable hapticStyle="light" style={styles.squadEtaBtn} onPress={() => setSquadExpanded(p => !p)}>
-                                            <Text style={styles.squadEtaLabel}>SQUAD ETAS</Text>
-                                            <Ionicons name={squadExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={THEME.COLOR.mint} />
-                                        </HapticPressable>
-                                    </View>
-                                    {squadExpanded && (
-                                        <View style={styles.squadEtaList}>
-                                            <Text style={styles.squadEtaPlaceholder}>ETAs available once backend is connected</Text>
-                                        </View>
-                                    )}
 
                                     <HapticPressable
                                         hapticStyle="medium"
@@ -596,7 +578,6 @@ const MapNavigation = () => {
                                             stepIndexRef.current = 0;
                                             setRemainingDuration(0);
                                             setTotalDistanceMi(0);
-                                            setSquadExpanded(false);
                                             setFollowing(true);
                                             const loc = liveLocationRef.current;
                                             if (loc) focusCamera(loc, headingRef.current, 500);
@@ -791,7 +772,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 24,
         paddingHorizontal: 24,
         paddingTop: 20,
-        paddingBottom: 36,
+        paddingBottom: Platform.OS === 'android' ? 56 : 36,
         gap: 10,
         zIndex: 30,
         elevation: 30,
@@ -823,51 +804,6 @@ const styles = StyleSheet.create({
     nextStatText: {
         color: THEME.COLOR.neutral400,
         fontSize: 14,
-    },
-    squadRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 6,
-    },
-    squadPlaceholderAvatars: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    squadAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#111111',
-    },
-    squadAvatarText: {
-        color: THEME.COLOR.white,
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    squadEtaBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    squadEtaLabel: {
-        color: THEME.COLOR.mint,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-    },
-    squadEtaList: {
-        paddingVertical: 8,
-        borderTopWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-    },
-    squadEtaPlaceholder: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 13,
-        fontStyle: 'italic',
     },
     startButton: {
         marginTop: 4,

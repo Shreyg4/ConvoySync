@@ -50,27 +50,31 @@ const Planner = () => {
     }
 
     const [myStops, setMyStops] = useState<Stop[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
-    // NOTE: DOES NOT PROTECT AGAINST DUPLICATE LOCATIONS CURRENTLY
+    const currentSnapshotKey = JSON.stringify({ myStops, customOrigin });
+    const isSaved = savedSnapshotKey !== null && savedSnapshotKey === currentSnapshotKey;
+
     const onSubmit = async () => {
+        if (isSaving || isSaved) return;
+        setIsSaving(true);
         try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`, {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                startLocation: customOrigin ? {
-                    name: originLabel,
-                    address: originLabel,
-                    lat: customOrigin.latitude,
-                    long: customOrigin.longitude,
-                } : null,
-                    stops: myStops
+                    startLocation: customOrigin ? {
+                        name: originLabel,
+                        address: originLabel,
+                        lat: customOrigin.latitude,
+                        long: customOrigin.longitude,
+                    } : null,
+                    stops: myStops,
                 }),
-        });
+            });
 
-        const text = await response.json();
+            const text = await response.json();
 
             if (!response.ok) {
                 console.log('status:', response.status);
@@ -78,18 +82,13 @@ const Planner = () => {
                 return;
             }
 
-            // router.push({
-            //     pathname: '/tripInfo',
-            //     params: {
-            //         tripId: data.trip.id,
-            //     },
-            // });
-            console.log(myStops);
-
+            setSavedSnapshotKey(currentSnapshotKey);
+            router.replace({ pathname: '/tripInfo', params: { tripId } });
         } catch (error) {
             console.error('Network error:', error);
+        } finally {
+            setIsSaving(false);
         }
-
     }
 
     // end my contributions // 
@@ -157,6 +156,13 @@ const Planner = () => {
                 }));
 
                 setMyStops(loadedMyStops);
+                setSavedSnapshotKey(JSON.stringify({
+                    myStops: loadedMyStops,
+                    customOrigin: data.startLocation ? {
+                        latitude: data.startLocation.latitude,
+                        longitude: data.startLocation.longitude,
+                    } : null,
+                }));
 
                 const [loadedDestination, ...loadedExtraStops] = loadedRouteStops;
 
@@ -476,7 +482,7 @@ const Planner = () => {
                             style={[styles.mapButton, hasRoute && styles.mapButtonActive]}
                             hapticStyle="medium"
                             disabled={!hasRoute}
-                            onPress={() => router.push('/maps/mapDirections')}
+                            onPress={() => router.push({ pathname: '/maps/mapDirections', params: { tripId, returnTo: 'planner' } })}
                         >
                             <Ionicons name="map" size={22} color={hasRoute ? THEME.COLOR.mint : THEME.COLOR.neutral500} />
                         </HapticPressable>
@@ -486,13 +492,13 @@ const Planner = () => {
                 <View style={styles.saveTripRow}>
                     <HapticPressable
                         hapticStyle="medium"
-                        disabled={!hasRoute}
+                        disabled={!hasRoute || isSaved || isSaving}
                         onPress={onSubmit}
                         style={styles.saveTripPressable}
                     >
-                        <View style={[styles.saveTripButton, !hasRoute && styles.saveTripButtonDisabled]}>
-                            <Text style={[styles.saveTripButtonText, !hasRoute && styles.saveTripButtonTextDisabled]}>
-                                Save Trip
+                        <View style={[styles.saveTripButton, (!hasRoute || isSaved || isSaving) && styles.saveTripButtonDisabled]}>
+                            <Text style={[styles.saveTripButtonText, (!hasRoute || isSaved || isSaving) && styles.saveTripButtonTextDisabled]}>
+                                {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Trip'}
                             </Text>
                         </View>
                     </HapticPressable>

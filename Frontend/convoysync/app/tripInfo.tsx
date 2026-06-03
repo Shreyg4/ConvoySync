@@ -114,7 +114,7 @@ const TripInfo = () => {
                 });
             });
             setItinerary(nextItinerary);
-            setHasRoute(nextItinerary.length > 1);
+            setHasRoute(stops.length > 0);
         } catch (error) {
             console.error("Load trip error:", error);
         }
@@ -230,6 +230,15 @@ const TripInfo = () => {
                     })}
                 >
                     <Text style={globalStyles.AddButtonText}><Ionicons name="add" size={15} color={THEME.COLOR.neutral500} /> Edit Itinerary</Text>
+                </HapticPressable>
+
+                <HapticPressable
+                    hapticStyle="light"
+                    style={[globalStyles.TripButton, { alignItems: 'center'}, !hasRoute && styles.startButtonDisabled]}
+                    disabled={!hasRoute}
+                    onPress={() => router.push({ pathname: '/maps/mapDirections', params: { tripId, returnTo: 'tripInfo' } })}
+                >
+                    <Text style={[globalStyles.TripButtoneText, { color: THEME.COLOR.mint }]}><Ionicons name="map-outline" size={15} color={THEME.COLOR.mint} /> Directions</Text>
                 </HapticPressable>
 
                 <HapticPressable

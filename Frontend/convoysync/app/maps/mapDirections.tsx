@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,7 +34,19 @@ const getManeuverIcon = (maneuver?: string) => {
 
 const MapDirections = () => {
     const router = useRouter();
-    const backRoute = '/maps/planner';
+    const { tripId, returnTo } = useLocalSearchParams<{ tripId?: string; returnTo?: string }>();
+    const goBack = () => {
+        if (returnTo === 'planner') {
+            router.back();
+        } else if (tripId) {
+            router.replace(returnTo === 'tripInfoMember'
+                ? { pathname: '/tripInfoMember', params: { tripId } } as any
+                : { pathname: '/tripInfo', params: { tripId } } as any
+            );
+        } else {
+            router.back();
+        }
+    };
     const mapRef = useRef<MapView>(null);
     const [origin, setOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [locationGranted, setLocationGranted] = useState(false);
@@ -53,14 +65,53 @@ const MapDirections = () => {
 
     useFocusEffect(
         React.useCallback(() => {
-            const draft = getTripPlannerDraft();
-            setOriginLabel(draft.originLabel);
-            setCustomOrigin(draft.customOrigin);
-            setDestinationLabel(draft.destinationLabel);
-            setDestination(draft.destination);
-            setStops(draft.stops);
-            if (draft.customOrigin) setInitialLocationReady(true);
-        }, [])
+            if (tripId) {
+                const loadItinerary = async () => {
+                    try {
+                        const response = await fetch(
+                            `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                        );
+                        const data = await response.json();
+                        if (!response.ok) return;
+
+                        if (data.startLocation) {
+                            const origin = {
+                                latitude: data.startLocation.latitude,
+                                longitude: data.startLocation.longitude,
+                            };
+                            setCustomOrigin(origin);
+                            setOriginLabel(data.startLocation.name);
+                            setInitialLocationReady(true);
+                        }
+
+                        const loadedStops: { latitude: number; longitude: number; label: string }[] =
+                            data.stops.map((stop: any) => ({
+                                latitude: stop.location.latitude,
+                                longitude: stop.location.longitude,
+                                label: stop.location.name,
+                            }));
+
+                        const [first, ...rest] = loadedStops;
+                        if (first) {
+                            setDestination({ latitude: first.latitude, longitude: first.longitude });
+                            setDestinationLabel(first.label);
+                        }
+                        setStops(rest);
+                    } catch (error) {
+                        console.error('Load itinerary error:', error);
+                    }
+                };
+                loadItinerary();
+            } else {
+                const draft = getTripPlannerDraft();
+                setOriginLabel(draft.originLabel);
+                setCustomOrigin(draft.customOrigin);
+                setDestinationLabel(draft.destinationLabel);
+                setDestination(draft.destination);
+                setStops(draft.stops);
+                if (draft.customOrigin) setInitialLocationReady(true);
+            }
+        }, [tripId])
     );
 
     const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
@@ -179,7 +230,7 @@ const MapDirections = () => {
                         title=""
                         icon="chevron-back"
                         color={THEME.COLOR.black}
-                        onPress={() => router.replace(backRoute)}
+                        onPress={goBack}
                     />
                 </View>
 
