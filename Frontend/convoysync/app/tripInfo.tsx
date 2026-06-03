@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -81,59 +81,46 @@ const TripInfo = () => {
     const [hasRoute, setHasRoute] = useState(false);
     const [trip, setTrip] = useState<TripData | null>(null);
 
-    useFocusEffect(
-        React.useCallback(() => {
-            if (!tripId) return;
+    const loadTrip = useCallback(async () => {
+        if (!tripId) return;
+        try {
+            const response = await fetch(
+                `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}`
+            );
+            const data = await response.json();
+            if (!response.ok) {
+                console.log("status:", response.status);
+                console.log("body:", data);
+                return;
+            }
+            setTrip(data);
+            const nextItinerary: ItineraryItem[] = [];
+            if (data.startLocation) {
+                nextItinerary.push({
+                    id: "origin",
+                    title: data.startLocation.name,
+                    detail: "Start Point",
+                });
+            }
+            const stops = data.itinerary?.stops ?? [];
+            stops.forEach((stop: any, index: number) => {
+                nextItinerary.push({
+                    id: String(stop.id),
+                    title: stop.location.name,
+                    detail:
+                        index === stops.length - 1
+                            ? "Destination"
+                            : `Stop ${index + 1}`,
+                });
+            });
+            setItinerary(nextItinerary);
+            setHasRoute(nextItinerary.length > 1);
+        } catch (error) {
+            console.error("Load trip error:", error);
+        }
+    }, [tripId]);
 
-            const loadTrip = async () => {
-          try {
-              const response = await fetch(
-                  `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}`
-              );
-
-              const data = await response.json();
-
-              if (!response.ok) {
-                  console.log("status:", response.status);
-                  console.log("body:", data);
-                  return;
-              }
-
-              setTrip(data);
-
-              const nextItinerary: ItineraryItem[] = [];
-
-              if (data.startLocation) {
-                  nextItinerary.push({
-                      id: "origin",
-                      title: data.startLocation.name,
-                      detail: "Start Point",
-                  });
-              }
-
-              const stops = data.itinerary?.stops ?? [];
-
-              stops.forEach((stop: any, index: number) => {
-                  nextItinerary.push({
-                      id: String(stop.id),
-                      title: stop.location.name,
-                      detail:
-                          index === stops.length - 1
-                              ? "Destination"
-                              : `Stop ${index + 1}`,
-                  });
-              });
-
-              setItinerary(nextItinerary);
-              setHasRoute(nextItinerary.length > 1);
-          } catch (error) {
-              console.error("Load trip error:", error);
-                }
-            };
-
-            loadTrip();
-        }, [tripId])
-    );
+    useFocusEffect(useCallback(() => { loadTrip(); }, [loadTrip]));
 
     //TODO: implement hook (useEffect) to getch trip from tripId
     //      display title, members, etc.
@@ -143,9 +130,14 @@ const TripInfo = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-                <HapticPressable hapticStyle="light" style={styles.backButton} onPress={() => router.replace('/(tabs)/home')}>
-                    <Ionicons name="chevron-back" size={20} color={THEME.COLOR.mint} />
-                </HapticPressable>
+                <View style={styles.headerRow}>
+                    <HapticPressable hapticStyle="light" style={styles.backButton} onPress={() => router.replace('/(tabs)/home')}>
+                        <Ionicons name="chevron-back" size={20} color={THEME.COLOR.mint} />
+                    </HapticPressable>
+                    <HapticPressable hapticStyle="light" style={styles.reloadButton} onPress={loadTrip}>
+                        <Ionicons name="refresh" size={20} color={THEME.COLOR.mint} />
+                    </HapticPressable>
+                </View>
 
                 <View style={styles.hero}>
                     <Text style={styles.tripTitle}>{trip?.name ?? "Loading trip..."}</Text>
@@ -190,15 +182,7 @@ const TripInfo = () => {
                     ))}
                 </ScrollView>
 
-                <HapticPressable
-                    hapticStyle="medium"
-                    style={globalStyles.AddButton}
-                    onPress={() => Alert.alert('Invite Members', 'Member invites will be wired up here next.')}
-                >
-                    <Text style={globalStyles.AddButtonText}><Ionicons name="person-add" size={15} color={THEME.COLOR.neutral500} /> Invite Members</Text>
-                </HapticPressable>
-
-                <View style={[styles.sectionHeader, { marginTop: THEME.SPACING.lg }]}>
+<View style={[styles.sectionHeader, { marginTop: THEME.SPACING.lg }]}>
                     <View style={styles.sectionTitleRow}>
                         <Ionicons name="navigate-circle-outline" size={15} color={THEME.COLOR.purple} />
                         <Text style={styles.sectionTitle}>Itinerary</Text>
@@ -276,12 +260,20 @@ const styles = StyleSheet.create({
         paddingHorizontal: THEME.SPACING.lg,
         paddingBottom: THEME.SPACING.huge,
     },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
     backButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
         paddingVertical: THEME.SPACING.sm,
         alignSelf: 'flex-start',
+    },
+    reloadButton: {
+        padding: THEME.SPACING.sm,
     },
     backText: {
         color: THEME.COLOR.mint,

@@ -259,36 +259,4 @@ export const mapStyles = StyleSheet.create({
         paddingTop: THEME.SPACING.sm,
         paddingBottom: THEME.SPACING.sm,
     },
-    suggestionsContainer: {
-        marginHorizontal: 24,
-        marginBottom: 24,
-        borderRadius: 18,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(118, 224, 187, 0.25)',
-        backgroundColor: THEME.COLOR.black,
-    },
-    suggestionsHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 18,
-        paddingVertical: 14,
-    },
-    suggestionsHeaderText: {
-        color: THEME.COLOR.white,
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    suggestionsBody: {
-        borderTopWidth: 1,
-        borderTopColor: 'rgba(118, 224, 187, 0.15)',
-        paddingHorizontal: 18,
-        paddingVertical: 20,
-    },
-    suggestionsEmptyText: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 14,
-        textAlign: 'center',
-    },
 });

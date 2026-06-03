@@ -60,18 +60,6 @@ const home = () => {
         <SafeAreaView style={globalStyles.container}>
             <Text style={globalStyles.title}>My Journeys</Text>
 
-            <Link href="/createTrip" asChild>
-                <HapticPressable
-                    style={globalStyles.AddButton}
-                    hapticStyle="light"
-                    showVisualFeedback
-                >
-                    <Text style={globalStyles.AddButtonText}>
-                        + Plan New Adventure
-                    </Text>
-                </HapticPressable>
-            </Link>
-
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -83,7 +71,7 @@ const home = () => {
                             key={trip.id}
                             hapticStyle="light"
                             showVisualFeedback
-                            style={globalStyles.AddButton}
+                            style={globalStyles.TripButton}
                             onPress={() => {
                                 router.push({
                                     pathname: trip.role === "member" ? "/tripInfoMember" : "/tripInfo",
@@ -93,7 +81,7 @@ const home = () => {
                                 });
                             }}
                         >
-                            <Text style={globalStyles.AddButtonText}>
+                            <Text style={globalStyles.TripButtoneText}>
                                 {trip.name}
                             </Text>
                         </HapticPressable>
@@ -102,6 +90,18 @@ const home = () => {
                     <Text style={globalStyles.title}>No trips found.</Text>
                 )}
             </ScrollView>
+
+            <Link href="/createTrip" asChild>
+                <HapticPressable
+                    style={globalStyles.AddButton}
+                    hapticStyle="light"
+                    showVisualFeedback
+                >
+                    <Text style={globalStyles.AddButtonText}>
+                        + Plan New Adventure
+                    </Text>
+                </HapticPressable>
+            </Link>
         </SafeAreaView>
     );
 }

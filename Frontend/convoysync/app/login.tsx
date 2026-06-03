@@ -55,11 +55,11 @@ const Login = () => {
                     <Controller
                         control={control}
                         name="email"
-                        rules={{ required: 'Username is required' }}
+                        rules={{ required: 'E-mail is required' }}
                         render={({ field: { onChange, value }, fieldState: { error } }) => (
                             <TextInput
                                 style={[globalStyles.input, { marginBottom: 20 }, error && { borderColor: 'red', borderWidth: 1 }]}
-                                placeholder="Enter username"
+                                placeholder="Enter E-mail"
                                 placeholderTextColor={globalStyles.input.color}
                                 onChangeText={onChange}
                                 value={value}

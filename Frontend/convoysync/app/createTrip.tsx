@@ -152,14 +152,6 @@ const CreateTrip = () => {
                 <HapticPressable onPress={handleSubmit((data) => { onSubmit(data) })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
                 </HapticPressable>
-                <HapticPressable
-                    onPress={() => router.push('/tripInfoMember')}
-                    style={globalStyles.logOutButton}
-                    hapticStyle="light"
-                    showVisualFeedback
-                >
-                    <Text style={[globalStyles.logOutButtonText, { color: THEME.COLOR.mint }]}>Open Trip Info Test Screen</Text>
-                </HapticPressable>
             </SafeAreaView>
         </TouchableWithoutFeedback>
     )
