@@ -15,7 +15,7 @@ import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const ADVANCE_THRESHOLD_METERS = 40;
-const ARRIVAL_THRESHOLD_METERS = 120;
+const ARRIVAL_THRESHOLD_METERS = 250;
 const HEADING_CAMERA_DELAY_MS = 450;
 
 const getManeuverIcon = (maneuver?: string): any => {
@@ -209,9 +209,7 @@ const MapNavigation = () => {
         routeDestinationRef.current = pts[currentDestIndex] ?? null;
     }, [destination, stops, currentDestIndex]);
 
-    // Redundant arrival check run after every liveLocation state commit.
-    // Guards against iOS timing where the GPS callback fires while routeDestinationRef
-    // is still null, causing the in-callback check to silently skip.
+    // Arrival check on every liveLocation commit — guards against iOS timing gaps.
     useEffect(() => {
         if (!liveLocation || arrivedRef.current || !routeDestinationRef.current) return;
         const dist = haversine(
@@ -223,6 +221,22 @@ const MapNavigation = () => {
             setArrived(true);
         }
     }, [liveLocation]);
+
+    // Interval-based fallback: polls refs every 2 s regardless of GPS update cadence.
+    useEffect(() => {
+        const id = setInterval(() => {
+            if (arrivedRef.current || !liveLocationRef.current || !routeDestinationRef.current) return;
+            const dist = haversine(
+                liveLocationRef.current.latitude, liveLocationRef.current.longitude,
+                routeDestinationRef.current.latitude, routeDestinationRef.current.longitude
+            );
+            if (dist < ARRIVAL_THRESHOLD_METERS) {
+                arrivedRef.current = true;
+                setArrived(true);
+            }
+        }, 2000);
+        return () => clearInterval(id);
+    }, []);
 
     useFocusEffect(
         React.useCallback(() => {
