@@ -9,8 +9,6 @@ import { useRouter } from "expo-router";
 import { ScrollView } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback } from 'react';
-import { apiUrl } from '../../lib/api';
-import { authHeader } from '../../lib/oauth';
 
 type Trip = {
     id: number;
@@ -29,16 +27,15 @@ const home = () => {
         useCallback(() => {
             const loadTrips = async () => {
                 try {
-                    const headers = await authHeader();
+                    const userId = await AsyncStorage.getItem("userId");
 
-                    if (!headers.Authorization) {
-                        console.log("Not signed in");
+                    if (!userId) {
+                        console.log("No userId found");
                         return;
                     }
 
                     const response = await fetch(
-                        apiUrl(`/users/me/trips`),
-                        { headers }
+                        `${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`
                     );
 
                     const data = await response.json();
@@ -63,18 +60,6 @@ const home = () => {
         <SafeAreaView style={globalStyles.container}>
             <Text style={globalStyles.title}>My Journeys</Text>
 
-            <Link href="/createTrip" asChild>
-                <HapticPressable
-                    style={globalStyles.AddButton}
-                    hapticStyle="light"
-                    showVisualFeedback
-                >
-                    <Text style={globalStyles.AddButtonText}>
-                        + Plan New Adventure
-                    </Text>
-                </HapticPressable>
-            </Link>
-
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingBottom: 20 }}
@@ -86,7 +71,7 @@ const home = () => {
                             key={trip.id}
                             hapticStyle="light"
                             showVisualFeedback
-                            style={globalStyles.AddButton}
+                            style={globalStyles.TripButton}
                             onPress={() => {
                                 router.push({
                                     pathname: trip.role === "member" ? "/tripInfoMember" : "/tripInfo",
@@ -96,7 +81,7 @@ const home = () => {
                                 });
                             }}
                         >
-                            <Text style={globalStyles.AddButtonText}>
+                            <Text style={globalStyles.TripButtoneText}>
                                 {trip.name}
                             </Text>
                         </HapticPressable>
@@ -105,6 +90,18 @@ const home = () => {
                     <Text style={globalStyles.title}>No trips found.</Text>
                 )}
             </ScrollView>
+
+            <Link href="/createTrip" asChild>
+                <HapticPressable
+                    style={globalStyles.AddButton}
+                    hapticStyle="light"
+                    showVisualFeedback
+                >
+                    <Text style={globalStyles.AddButtonText}>
+                        + Plan New Adventure
+                    </Text>
+                </HapticPressable>
+            </Link>
         </SafeAreaView>
     );
 }

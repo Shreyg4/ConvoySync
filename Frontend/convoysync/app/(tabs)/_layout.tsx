@@ -39,15 +39,6 @@ const tabsLayout = () => {
                 }} 
             />
             <Tabs.Screen 
-                name='archivedTrips' 
-                options= {{
-                    title: "Saved Trips", 
-                    tabBarIcon: ({color, size}) => (
-                        <Ionicons name='archive' size={size} color={color}/>
-                    )
-                }} 
-            />
-            <Tabs.Screen 
                 name='joinTrip' 
                 options= {{
                     title: "Join Trip", 

@@ -15,18 +15,7 @@ import {
     getTripPlannerDraft,
     setTripPlannerDraft,
 } from './tripPlannerStore';
-import {
-    type Suggestion,
-    getSuggestions,
-    deleteSuggestion,
-    subscribeSuggestions,
-    CURRENT_USER,
-} from './suggestionStore';
 import { useLocalSearchParams } from 'expo-router';
-import { apiUrl } from '../../lib/api';
-
-// Replace with real role from auth/trip context once backend is wired up
-const IS_PARTY_LEADER = false;
 
 const STOP_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
 const MAX_STOPS = 5;
@@ -41,9 +30,6 @@ const Planner = () => {
     const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
     const [stops, setStops] = useState<RouteStop[]>([]);
     const [selectionTarget, setSelectionTarget] = useState<RouteSelectionTarget | null>(null);
-    const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
-    const [suggestions, setSuggestions] = useState<Suggestion[]>(getSuggestions());
-
     // my contributions: //
     // need an array for storing stops (stop order + eta?)
     // need to store location data in a stop
@@ -64,27 +50,31 @@ const Planner = () => {
     }
 
     const [myStops, setMyStops] = useState<Stop[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
-    // NOTE: DOES NOT PROTECT AGAINST DUPLICATE LOCATIONS CURRENTLY
+    const currentSnapshotKey = JSON.stringify({ myStops, customOrigin });
+    const isSaved = savedSnapshotKey !== null && savedSnapshotKey === currentSnapshotKey;
+
     const onSubmit = async () => {
+        if (isSaving || isSaved) return;
+        setIsSaving(true);
         try {
-        const response = await fetch(apiUrl(`/trips/${tripId}/itinerary/stops`), {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                startLocation: customOrigin ? {
-                    name: originLabel,
-                    address: originLabel,
-                    lat: customOrigin.latitude,
-                    long: customOrigin.longitude,
-                } : null,
-                    stops: myStops
+                    startLocation: customOrigin ? {
+                        name: originLabel,
+                        address: originLabel,
+                        lat: customOrigin.latitude,
+                        long: customOrigin.longitude,
+                    } : null,
+                    stops: myStops,
                 }),
-        });
+            });
 
-        const text = await response.json();
+            const text = await response.json();
 
             if (!response.ok) {
                 console.log('status:', response.status);
@@ -92,25 +82,16 @@ const Planner = () => {
                 return;
             }
 
-            // router.push({
-            //     pathname: '/tripInfo',
-            //     params: {
-            //         tripId: data.trip.id,
-            //     },
-            // });
-            console.log(myStops);
-
+            setSavedSnapshotKey(currentSnapshotKey);
+            router.replace({ pathname: '/tripInfo', params: { tripId } });
         } catch (error) {
             console.error('Network error:', error);
+        } finally {
+            setIsSaving(false);
         }
-
     }
 
     // end my contributions // 
-
-    useEffect(() => {
-        return subscribeSuggestions(() => setSuggestions(getSuggestions()));
-    }, []);
 
     useEffect(() => {
         const draft = getTripPlannerDraft();
@@ -137,7 +118,7 @@ const Planner = () => {
         const loadItineraryStops = async () => {
             try {
                 const response = await fetch(
-                    apiUrl(`/trips/${tripId}/itinerary/stops`)
+                    `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
                 );
 
                 const data = await response.json();
@@ -175,6 +156,13 @@ const Planner = () => {
                 }));
 
                 setMyStops(loadedMyStops);
+                setSavedSnapshotKey(JSON.stringify({
+                    myStops: loadedMyStops,
+                    customOrigin: data.startLocation ? {
+                        latitude: data.startLocation.latitude,
+                        longitude: data.startLocation.longitude,
+                    } : null,
+                }));
 
                 const [loadedDestination, ...loadedExtraStops] = loadedRouteStops;
 
@@ -494,7 +482,7 @@ const Planner = () => {
                             style={[styles.mapButton, hasRoute && styles.mapButtonActive]}
                             hapticStyle="medium"
                             disabled={!hasRoute}
-                            onPress={() => router.push('/maps/mapDirections')}
+                            onPress={() => router.push({ pathname: '/maps/mapDirections', params: { tripId, returnTo: 'planner' } })}
                         >
                             <Ionicons name="map" size={22} color={hasRoute ? THEME.COLOR.mint : THEME.COLOR.neutral500} />
                         </HapticPressable>
@@ -504,65 +492,18 @@ const Planner = () => {
                 <View style={styles.saveTripRow}>
                     <HapticPressable
                         hapticStyle="medium"
-                        disabled={!hasRoute}
+                        disabled={!hasRoute || isSaved || isSaving}
                         onPress={onSubmit}
                         style={styles.saveTripPressable}
                     >
-                        <View style={[styles.saveTripButton, !hasRoute && styles.saveTripButtonDisabled]}>
-                            <Text style={[styles.saveTripButtonText, !hasRoute && styles.saveTripButtonTextDisabled]}>
-                                Save Trip
+                        <View style={[styles.saveTripButton, (!hasRoute || isSaved || isSaving) && styles.saveTripButtonDisabled]}>
+                            <Text style={[styles.saveTripButtonText, (!hasRoute || isSaved || isSaving) && styles.saveTripButtonTextDisabled]}>
+                                {isSaving ? 'Saving...' : isSaved ? 'Saved' : 'Save Trip'}
                             </Text>
                         </View>
                     </HapticPressable>
                 </View>
 
-                <View style={mapStyles.suggestionsContainer}>
-                    <HapticPressable
-                        hapticStyle="light"
-                        onPress={() => setSuggestionsExpanded(prev => !prev)}
-                    >
-                        <View style={mapStyles.suggestionsHeader}>
-                            <Text style={mapStyles.suggestionsHeaderText}>Suggestions</Text>
-                            <Ionicons
-                                name={suggestionsExpanded ? 'chevron-up' : 'chevron-down'}
-                                size={18}
-                                color={THEME.COLOR.mint}
-                            />
-                        </View>
-                    </HapticPressable>
-
-                    {suggestionsExpanded && (
-                        <View style={mapStyles.suggestionsBody}>
-                            {suggestions.length === 0 ? (
-                                <Text style={mapStyles.suggestionsEmptyText}>No suggestions yet</Text>
-                            ) : (
-                                suggestions.map((s) => (
-                                    <View key={s.id} style={styles.suggestionItem}>
-                                        <Ionicons
-                                            name="location"
-                                            size={18}
-                                            color={s.userId === CURRENT_USER.id ? THEME.COLOR.mint : '#3b82f6'}
-                                        />
-                                        <View style={styles.suggestionInfo}>
-                                            <Text style={styles.suggestionLabel} numberOfLines={1}>{s.label}</Text>
-                                            <Text style={styles.suggestionUser}>
-                                                {s.userId === CURRENT_USER.id ? 'You' : s.userName}
-                                            </Text>
-                                        </View>
-                                        {(s.userId === CURRENT_USER.id || IS_PARTY_LEADER) && (
-                                            <HapticPressable
-                                                hapticStyle="light"
-                                                onPress={() => deleteSuggestion(s.id, CURRENT_USER.id, IS_PARTY_LEADER)}
-                                            >
-                                                <Ionicons name="trash-outline" size={18} color={THEME.COLOR.neutral500} />
-                                            </HapticPressable>
-                                        )}
-                                    </View>
-                                ))
-                            )}
-                        </View>
-                    )}
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -652,41 +593,6 @@ const styles = StyleSheet.create({
         borderColor: THEME.COLOR.neutral500,
     },
     addStopButtonTextDisabled: {
-        color: THEME.COLOR.neutral500,
-    },
-    suggestionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(118, 224, 187, 0.1)',
-    },
-    suggestionInfo: {
-        flex: 1,
-    },
-    suggestionLabel: {
-        color: THEME.COLOR.white,
-        fontSize: 13,
-        fontWeight: '500',
-    },
-    suggestionUser: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 11,
-        marginTop: 2,
-    },
-    suggestLocationButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 12,
-    },
-    suggestLocationText: {
-        color: THEME.COLOR.mint,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    suggestLocationTextDisabled: {
         color: THEME.COLOR.neutral500,
     },
     saveTripRow: {

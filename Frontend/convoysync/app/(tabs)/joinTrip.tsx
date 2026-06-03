@@ -5,28 +5,26 @@ import { globalStyles } from '../../styles/globalStyles';
 import HapticPressable from '../../components/pressableCustomization';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from 'expo-router';
-import { apiUrl } from '../../lib/api';
-import { authHeader } from '../../lib/oauth';
 
 const JoinTrip = () => {
     const [code, setCode] = useState('');
      const router = useRouter();
 
     const onSubmit = async () => {
-        const headers = await authHeader();
+        const userId = await AsyncStorage.getItem("userId");
 
-        if (!headers.Authorization) {
-            console.log("Not signed in");
+        if (!userId) {
+            console.log("No userId found");
             return;
         }
 
-        const response = await fetch(apiUrl(`/trips/join`), {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/join`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                ...headers,
+                    'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+                userId: Number(userId),
                 inviteCode: code,
             })
         });

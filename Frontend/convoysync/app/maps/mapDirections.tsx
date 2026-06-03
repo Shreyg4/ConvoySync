@@ -34,8 +34,19 @@ const getManeuverIcon = (maneuver?: string) => {
 
 const MapDirections = () => {
     const router = useRouter();
-    const { from } = useLocalSearchParams<{ from?: string }>();
-    const backRoute = from === 'plannerSuggest' ? '/maps/plannerSuggest' : '/maps/planner';
+    const { tripId, returnTo } = useLocalSearchParams<{ tripId?: string; returnTo?: string }>();
+    const goBack = () => {
+        if (returnTo === 'planner') {
+            router.back();
+        } else if (tripId) {
+            router.replace(returnTo === 'tripInfoMember'
+                ? { pathname: '/tripInfoMember', params: { tripId } } as any
+                : { pathname: '/tripInfo', params: { tripId } } as any
+            );
+        } else {
+            router.back();
+        }
+    };
     const mapRef = useRef<MapView>(null);
     const [origin, setOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [locationGranted, setLocationGranted] = useState(false);
@@ -54,14 +65,53 @@ const MapDirections = () => {
 
     useFocusEffect(
         React.useCallback(() => {
-            const draft = getTripPlannerDraft();
-            setOriginLabel(draft.originLabel);
-            setCustomOrigin(draft.customOrigin);
-            setDestinationLabel(draft.destinationLabel);
-            setDestination(draft.destination);
-            setStops(draft.stops);
-            if (draft.customOrigin) setInitialLocationReady(true);
-        }, [])
+            if (tripId) {
+                const loadItinerary = async () => {
+                    try {
+                        const response = await fetch(
+                            `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                        );
+                        const data = await response.json();
+                        if (!response.ok) return;
+
+                        if (data.startLocation) {
+                            const origin = {
+                                latitude: data.startLocation.latitude,
+                                longitude: data.startLocation.longitude,
+                            };
+                            setCustomOrigin(origin);
+                            setOriginLabel(data.startLocation.name);
+                            setInitialLocationReady(true);
+                        }
+
+                        const loadedStops: { latitude: number; longitude: number; label: string }[] =
+                            data.stops.map((stop: any) => ({
+                                latitude: stop.location.latitude,
+                                longitude: stop.location.longitude,
+                                label: stop.location.name,
+                            }));
+
+                        const [first, ...rest] = loadedStops;
+                        if (first) {
+                            setDestination({ latitude: first.latitude, longitude: first.longitude });
+                            setDestinationLabel(first.label);
+                        }
+                        setStops(rest);
+                    } catch (error) {
+                        console.error('Load itinerary error:', error);
+                    }
+                };
+                loadItinerary();
+            } else {
+                const draft = getTripPlannerDraft();
+                setOriginLabel(draft.originLabel);
+                setCustomOrigin(draft.customOrigin);
+                setDestinationLabel(draft.destinationLabel);
+                setDestination(draft.destination);
+                setStops(draft.stops);
+                if (draft.customOrigin) setInitialLocationReady(true);
+            }
+        }, [tripId])
     );
 
     const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
@@ -149,10 +199,12 @@ const MapDirections = () => {
 
                 {activeOrigin && routeDestination && (
                     <MapViewDirections
+                        key={`route-${activeOrigin.latitude.toFixed(4)}-${routeDestination.latitude.toFixed(4)}`}
                         origin={activeOrigin}
                         destination={routeDestination}
                         waypoints={routeWaypoints}
                         apikey={GOOGLE_API_KEY}
+                        mode="DRIVING"
                         strokeColor="blue"
                         strokeWidth={5}
                         onReady={(result) => {
@@ -166,6 +218,7 @@ const MapDirections = () => {
                                 animated: true,
                             });
                         }}
+                        onError={(err) => console.error('MapViewDirections error:', err)}
                     />
                 )}
             </MapView>
@@ -176,19 +229,9 @@ const MapDirections = () => {
                     <BackHeader
                         title=""
                         icon="chevron-back"
-                        color={THEME.COLOR.mint}
-                        onPress={() => router.replace(backRoute)}
+                        color={THEME.COLOR.black}
+                        onPress={goBack}
                     />
-                    {routeDestination && (
-                        <HapticPressable
-                            hapticStyle="medium"
-                            onPress={() => router.replace('/maps/mapNavigation')}
-                            style={styles.navigateButton}
-                        >
-                            <Ionicons name="navigate" size={14} color={THEME.COLOR.black} />
-                            <Text style={styles.navigateButtonText}>Navigate</Text>
-                        </HapticPressable>
-                    )}
                 </View>
 
                 {!routeDestination && (

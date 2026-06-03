@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,8 +14,8 @@ import { setNavState } from './navigationStore';
 import { mapStyles } from '@/styles/mapStyles';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
-const ADVANCE_THRESHOLD_METERS = 30;
-const ARRIVAL_THRESHOLD_METERS = 50;
+const ADVANCE_THRESHOLD_METERS = 40;
+const ARRIVAL_THRESHOLD_METERS = 250;
 const HEADING_CAMERA_DELAY_MS = 450;
 
 const getManeuverIcon = (maneuver?: string): any => {
@@ -58,6 +58,10 @@ const formatDistanceToTurn = (meters: number): string => {
 
 const MapNavigation = () => {
     const router = useRouter();
+    const { tripId, returnTo } = useLocalSearchParams<{ tripId?: string; returnTo?: string }>();
+    const backRoute = tripId
+        ? { pathname: returnTo === 'tripInfoMember' ? '/tripInfoMember' : '/tripInfo' as const, params: { tripId } }
+        : '/maps/mapDirections';
     const insets = useSafeAreaInsets();
     const mapRef = useRef<MapView>(null);
     const mapReadyRef = useRef(false);
@@ -97,7 +101,6 @@ const MapNavigation = () => {
     const arrivedRef = useRef(false);
     const [currentDestIndex, setCurrentDestIndex] = useState(0);
     const currentDestIndexRef = useRef(0);
-    const [squadExpanded, setSquadExpanded] = useState(false);
     const routeDestinationRef = useRef<{ latitude: number; longitude: number } | null>(null);
     const [routeStartOrigin, setRouteStartOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const routeStartOriginSetRef = useRef(false);
@@ -149,16 +152,52 @@ const MapNavigation = () => {
     };
 
     useEffect(() => {
-        const draft = getTripPlannerDraft();
-        setCustomOrigin(draft.customOrigin);
-        setDestination(draft.destination);
-        setDestinationLabel(draft.destinationLabel);
-        setStops(draft.stops);
-        if (draft.customOrigin) {
-            setRouteStartOrigin(draft.customOrigin);
-            routeStartOriginSetRef.current = true;
+        if (tripId) {
+            const loadItinerary = async () => {
+                try {
+                    const response = await fetch(
+                        `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                    );
+                    const data = await response.json();
+                    if (!response.ok) return;
+
+                    if (data.startLocation) {
+                        setCustomOrigin({
+                            latitude: data.startLocation.latitude,
+                            longitude: data.startLocation.longitude,
+                        });
+                    }
+
+                    const loadedStops: { latitude: number; longitude: number; label: string }[] =
+                        data.stops.map((stop: any) => ({
+                            latitude: stop.location.latitude,
+                            longitude: stop.location.longitude,
+                            label: stop.location.name,
+                        }));
+
+                    const [first, ...rest] = loadedStops;
+                    if (first) {
+                        setDestination({ latitude: first.latitude, longitude: first.longitude });
+                        setDestinationLabel(first.label);
+                    }
+                    setStops(rest);
+                } catch (error) {
+                    console.error('Load itinerary error:', error);
+                }
+            };
+            loadItinerary();
+        } else {
+            const draft = getTripPlannerDraft();
+            setCustomOrigin(draft.customOrigin);
+            setDestination(draft.destination);
+            setDestinationLabel(draft.destinationLabel);
+            setStops(draft.stops);
+            if (draft.customOrigin) {
+                setRouteStartOrigin(draft.customOrigin);
+                routeStartOriginSetRef.current = true;
+            }
         }
-    }, []);
+    }, [tripId]);
 
     useEffect(() => { legsRef.current = legs; }, [legs]);
     useEffect(() => { legIndexRef.current = legIndex; }, [legIndex]);
@@ -169,6 +208,35 @@ const MapNavigation = () => {
         const pts = destination ? [destination, ...activeStops] : activeStops;
         routeDestinationRef.current = pts[currentDestIndex] ?? null;
     }, [destination, stops, currentDestIndex]);
+
+    // Arrival check on every liveLocation commit — guards against iOS timing gaps.
+    useEffect(() => {
+        if (!liveLocation || arrivedRef.current || !routeDestinationRef.current) return;
+        const dist = haversine(
+            liveLocation.latitude, liveLocation.longitude,
+            routeDestinationRef.current.latitude, routeDestinationRef.current.longitude
+        );
+        if (dist < ARRIVAL_THRESHOLD_METERS) {
+            arrivedRef.current = true;
+            setArrived(true);
+        }
+    }, [liveLocation]);
+
+    // Interval-based fallback: polls refs every 2 s regardless of GPS update cadence.
+    useEffect(() => {
+        const id = setInterval(() => {
+            if (arrivedRef.current || !liveLocationRef.current || !routeDestinationRef.current) return;
+            const dist = haversine(
+                liveLocationRef.current.latitude, liveLocationRef.current.longitude,
+                routeDestinationRef.current.latitude, routeDestinationRef.current.longitude
+            );
+            if (dist < ARRIVAL_THRESHOLD_METERS) {
+                arrivedRef.current = true;
+                setArrived(true);
+            }
+        }, 2000);
+        return () => clearInterval(id);
+    }, []);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -230,8 +298,8 @@ const MapNavigation = () => {
             sub = await Location.watchPositionAsync(
                 {
                     accuracy: Location.Accuracy.BestForNavigation,
-                    timeInterval: 1000,
-                    distanceInterval: 2,
+                    timeInterval: 500,
+                    distanceInterval: 1,
                 },
                 ({ coords }) => {
                     const { latitude, longitude } = coords;
@@ -360,9 +428,11 @@ const MapNavigation = () => {
                     </Marker>
                     {routeStartOrigin && routePoints[currentDestIndex] && (
                         <MapViewDirections
+                            key={`route-${currentDestIndex}-${routeStartOrigin.latitude.toFixed(4)}-${routePoints[currentDestIndex]!.latitude.toFixed(4)}`}
                             origin={routeStartOrigin}
                             destination={routePoints[currentDestIndex]!}
                             apikey={GOOGLE_API_KEY}
+                            mode="DRIVING"
                             strokeColor="#0d00ff"
                             strokeWidth={5}
                             onReady={(result) => {
@@ -384,6 +454,7 @@ const MapNavigation = () => {
                                     activeLegIndex: 0,
                                 });
                             }}
+                            onError={(err) => console.error('MapViewDirections error:', err)}
                         />
                     )}
                 </MapView>
@@ -412,9 +483,6 @@ const MapNavigation = () => {
                         <Text style={styles.distanceToTurn}>{distanceToTurn}</Text>
                     ) : null}
                 </View>
-                <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => router.push('/maps/convoyEta')}>
-                    <Ionicons name="people" size={20} color="#4285F4" />
-                </HapticPressable>
             </View>}
 
             {!isFollowing && (
@@ -447,7 +515,7 @@ const MapNavigation = () => {
                                 {totalDistanceMi.toFixed(1)} mi · Arrives {eta}
                             </Text>
                         </HapticPressable>
-                        <HapticPressable hapticStyle="medium" onPress={() => router.replace('/maps/mapDirections')} style={styles.exitButton}>
+                        <HapticPressable hapticStyle="medium" onPress={() => router.replace(backRoute as any)} style={styles.exitButton}>
                             <Text style={{ color: THEME.COLOR.white, fontWeight: '600' }}>Exit</Text>
                         </HapticPressable>
                     </View>
@@ -461,10 +529,6 @@ const MapNavigation = () => {
                                     <Text style={styles.actionButtonText}>Directions</Text>
                                 </HapticPressable>
                                 <View style={styles.actionDivider} />
-                                <HapticPressable hapticStyle="light" style={styles.actionButton} onPress={() => {}}>
-                                    <Ionicons name="git-branch" size={20} color="#4285F4" />
-                                    <Text style={[styles.actionButtonText, { color: '#4285F4' }]}>Suggest Reroute</Text>
-                                </HapticPressable>
                             </View>
 
                         </View>
@@ -498,7 +562,7 @@ const MapNavigation = () => {
                                     <HapticPressable
                                         hapticStyle="medium"
                                         style={styles.startButton}
-                                        onPress={() => router.replace('/maps/mapDirections')}
+                                        onPress={() => router.replace(backRoute as any)}
                                     >
                                         <Text style={styles.startButtonText}>Done</Text>
                                     </HapticPressable>
@@ -507,34 +571,6 @@ const MapNavigation = () => {
                                 <>
                                     <Text style={styles.nextDestLabel}>NEXT DESTINATION</Text>
                                     <Text style={styles.nextDestName} numberOfLines={1} ellipsizeMode="tail">{nextLabel}</Text>
-                                    {/* Squad ETAs — placeholder until backend is wired */}
-                                    <View style={styles.squadRow}>
-                                        <View style={styles.squadPlaceholderAvatars}>
-                                            {['D', 'A', 'S'].map((init, i) => (
-                                                <View
-                                                    key={i}
-                                                    style={[
-                                                        styles.squadAvatar,
-                                                        { marginLeft: i > 0 ? -8 : 0 },
-                                                        i === 0 && { backgroundColor: '#9333ea' },
-                                                        i === 1 && { backgroundColor: '#16a34a' },
-                                                        i === 2 && { backgroundColor: '#dc2626' },
-                                                    ]}
-                                                >
-                                                    <Text style={styles.squadAvatarText}>{init}</Text>
-                                                </View>
-                                            ))}
-                                        </View>
-                                        <HapticPressable hapticStyle="light" style={styles.squadEtaBtn} onPress={() => setSquadExpanded(p => !p)}>
-                                            <Text style={styles.squadEtaLabel}>SQUAD ETAS</Text>
-                                            <Ionicons name={squadExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={THEME.COLOR.mint} />
-                                        </HapticPressable>
-                                    </View>
-                                    {squadExpanded && (
-                                        <View style={styles.squadEtaList}>
-                                            <Text style={styles.squadEtaPlaceholder}>ETAs available once backend is connected</Text>
-                                        </View>
-                                    )}
 
                                     <HapticPressable
                                         hapticStyle="medium"
@@ -556,7 +592,6 @@ const MapNavigation = () => {
                                             stepIndexRef.current = 0;
                                             setRemainingDuration(0);
                                             setTotalDistanceMi(0);
-                                            setSquadExpanded(false);
                                             setFollowing(true);
                                             const loc = liveLocationRef.current;
                                             if (loc) focusCamera(loc, headingRef.current, 500);
@@ -588,6 +623,8 @@ const styles = StyleSheet.create({
     },
     navCard: {
         position: 'absolute',
+        left: 15,
+        right: 15,
         backgroundColor: THEME.COLOR.black,
         borderRadius: 16,
         flexDirection: 'row',
@@ -621,16 +658,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         marginTop: 3,
-    },
-    groupBox: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.25)',
     },
     handle: {
         width: 36,
@@ -759,7 +786,7 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 24,
         paddingHorizontal: 24,
         paddingTop: 20,
-        paddingBottom: 36,
+        paddingBottom: Platform.OS === 'android' ? 56 : 36,
         gap: 10,
         zIndex: 30,
         elevation: 30,
@@ -791,51 +818,6 @@ const styles = StyleSheet.create({
     nextStatText: {
         color: THEME.COLOR.neutral400,
         fontSize: 14,
-    },
-    squadRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 6,
-    },
-    squadPlaceholderAvatars: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    squadAvatar: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#111111',
-    },
-    squadAvatarText: {
-        color: THEME.COLOR.white,
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    squadEtaBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    squadEtaLabel: {
-        color: THEME.COLOR.mint,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.8,
-    },
-    squadEtaList: {
-        paddingVertical: 8,
-        borderTopWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-    },
-    squadEtaPlaceholder: {
-        color: THEME.COLOR.neutral500,
-        fontSize: 13,
-        fontStyle: 'italic',
     },
     startButton: {
         marginTop: 4,

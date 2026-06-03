@@ -64,6 +64,21 @@ export const globalStyles = StyleSheet.create({
     fontSize: THEME.FONT_SIZE.lg,
     fontWeight: THEME.FONT_WEIGHT.medium,
   },
+  TripButton: {
+    borderStyle: 'solid',
+    borderColor: THEME.COLOR.neutral500,
+    backgroundColor: THEME.COLOR.surface,
+    borderWidth: 1,
+    paddingVertical: THEME.SPACING.md,
+    paddingHorizontal: THEME.SPACING.lg,
+    borderRadius: THEME.BORDER_RADIUS.xl,
+    marginTop: THEME.SPACING.lg,
+  },
+  TripButtoneText: {
+    color: THEME.COLOR.white,
+    fontSize: THEME.FONT_SIZE.lg,
+    fontWeight: THEME.FONT_WEIGHT.medium,
+  },
   logOutButton: {
     borderStyle: 'solid',
     borderColor: THEME.COLOR.neutral500,

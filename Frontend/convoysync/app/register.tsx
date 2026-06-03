@@ -1,13 +1,9 @@
-import { useState } from 'react';
-import { Text, TextInput, Image, KeyboardAvoidingView, ScrollView, View, ActivityIndicator, Alert } from 'react-native'
+import { Text, TextInput, Image, KeyboardAvoidingView, ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles/globalStyles';
 import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
-import { signInWithProvider, OAuthProvider } from '../lib/oauth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiUrl } from '../lib/api';
 
 const Register = () => {
     const { control, handleSubmit, setError } = useForm({
@@ -19,7 +15,6 @@ const Register = () => {
         },
     });
     const router = useRouter();
-    const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
     const onSubmit = async (data: any) => {
         if (data.password !== data.confirmPassword) {
@@ -29,7 +24,7 @@ const Register = () => {
 
         try {
             // when testing locally, MAKE SURE TO USE TO MATCH YOUR IP, localhost will not work.
-            const response = await fetch(apiUrl('/users'), {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/users`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -39,41 +34,23 @@ const Register = () => {
                     name: data.username,
                     password: data.password,
                 }),
-            });
+            })
 
             const text = await response.json();
 
             if (!response.ok) {
+                // handle
                 console.log('status:', response.status);
                 console.log('body:', text);
                 return;
             }
-
-            // Avoid doing this in actual production code.
-            await AsyncStorage.setItem("userId", String(text.id));
-
-            router.push('/home');
-
         } catch (error) {
             console.error('Network error:', error);
         }
-    };
 
-    const handleOAuth = async (provider: OAuthProvider) => {
-        if (oauthLoading) return;
-        setOauthLoading(provider);
-        try {
-            const result = await signInWithProvider(provider);
-            if (result.ok) {
-                router.push('/home');
-            } else if (result.reason === 'error') {
-                Alert.alert('Sign-in failed', result.message || 'Please try again');
-            }
-        } finally {
-            setOauthLoading(null);
-        }
+        // all good
+        router.push('/home');
     };
-
     return (
         <SafeAreaView style={globalStyles.container}>
             <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
@@ -137,37 +114,6 @@ const Register = () => {
                     <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="light" showVisualFeedback>
                         <Text style={globalStyles.SubmitButtonText}>Create Account</Text>
                     </HapticPressable>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>
-                        <View style={{ flex: 1, height: 1, backgroundColor: '#ccc' }} />
-                        <Text style={{ marginHorizontal: 12, color: '#888' }}>or</Text>
-                        <View style={{ flex: 1, height: 1, backgroundColor: '#ccc' }} />
-                    </View>
-
-                    <HapticPressable
-                        onPress={() => handleOAuth('google')}
-                        style={[globalStyles.SubmitButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', marginBottom: 12 }]}
-                        hapticStyle="light"
-                        showVisualFeedback
-                        disabled={oauthLoading !== null}
-                    >
-                        {oauthLoading === 'google'
-                            ? <ActivityIndicator color="#444" />
-                            : <Text style={[globalStyles.SubmitButtonText, { color: '#444' }]}>Continue with Google</Text>}
-                    </HapticPressable>
-
-                    <HapticPressable
-                        onPress={() => handleOAuth('github')}
-                        style={[globalStyles.SubmitButton, { backgroundColor: '#24292e' }]}
-                        hapticStyle="light"
-                        showVisualFeedback
-                        disabled={oauthLoading !== null}
-                    >
-                        {oauthLoading === 'github'
-                            ? <ActivityIndicator color="#fff" />
-                            : <Text style={[globalStyles.SubmitButtonText, { color: '#fff' }]}>Continue with GitHub</Text>}
-                    </HapticPressable>
-
                     <Link href="/login" asChild>
                         <HapticPressable hapticStyle="light" showVisualFeedback>
                             <Text style={[globalStyles.SubmitButtonText, { color: 'white', marginTop: 40, textAlign: 'center' }]}>Already have an account? Login</Text>
@@ -180,3 +126,4 @@ const Register = () => {
 }
 
 export default Register;
+

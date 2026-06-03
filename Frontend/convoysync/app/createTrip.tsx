@@ -8,8 +8,7 @@ import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
-import { apiUrl } from '../lib/api';
-import { authHeader } from '../lib/oauth';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -54,14 +53,16 @@ const CreateTrip = () => {
         hideTimePicker();
     };
 
+    // My contribution:
+
     const onSubmit = async (data: any) => {
+        const userId = await AsyncStorage.getItem("userId");
+
         try {
-            // Owner is resolved from the JWT server-side; the path id is ignored.
-            const response = await fetch(apiUrl(`/users/me/trips`), {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(await authHeader()),
                 },
                 body: JSON.stringify(data),
             })
@@ -150,14 +151,6 @@ const CreateTrip = () => {
                 />
                 <HapticPressable onPress={handleSubmit((data) => { onSubmit(data) })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
                     <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
-                </HapticPressable>
-                <HapticPressable
-                    onPress={() => router.push('/tripInfoMember')}
-                    style={globalStyles.logOutButton}
-                    hapticStyle="light"
-                    showVisualFeedback
-                >
-                    <Text style={[globalStyles.logOutButtonText, { color: THEME.COLOR.mint }]}>Open Trip Info Test Screen</Text>
                 </HapticPressable>
             </SafeAreaView>
         </TouchableWithoutFeedback>
