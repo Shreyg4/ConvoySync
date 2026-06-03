@@ -220,7 +220,7 @@ const TripInfo = () => {
                 <HapticPressable
                     hapticStyle="medium"
                     style={[styles.startButton, !hasRoute && styles.startButtonDisabled]}
-                    onPress={() => { if (hasRoute) router.replace('/maps/mapNavigation'); }}
+                    onPress={() => { if (hasRoute) router.replace({ pathname: '/maps/mapNavigation', params: { tripId, returnTo: 'tripInfoMember' } }); }}
                 >
                     <Ionicons name="navigate" size={18} color={hasRoute ? THEME.COLOR.black : THEME.COLOR.neutral500} />
                     <Text style={[styles.startButtonText, !hasRoute && styles.startButtonTextDisabled]}>

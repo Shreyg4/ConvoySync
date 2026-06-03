@@ -3,7 +3,7 @@ import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import MapViewDirections from 'react-native-maps-directions';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +58,10 @@ const formatDistanceToTurn = (meters: number): string => {
 
 const MapNavigation = () => {
     const router = useRouter();
+    const { tripId, returnTo } = useLocalSearchParams<{ tripId?: string; returnTo?: string }>();
+    const backRoute = tripId
+        ? { pathname: returnTo === 'tripInfoMember' ? '/tripInfoMember' : '/tripInfo' as const, params: { tripId } }
+        : '/maps/mapDirections';
     const insets = useSafeAreaInsets();
     const mapRef = useRef<MapView>(null);
     const mapReadyRef = useRef(false);
@@ -149,16 +153,52 @@ const MapNavigation = () => {
     };
 
     useEffect(() => {
-        const draft = getTripPlannerDraft();
-        setCustomOrigin(draft.customOrigin);
-        setDestination(draft.destination);
-        setDestinationLabel(draft.destinationLabel);
-        setStops(draft.stops);
-        if (draft.customOrigin) {
-            setRouteStartOrigin(draft.customOrigin);
-            routeStartOriginSetRef.current = true;
+        if (tripId) {
+            const loadItinerary = async () => {
+                try {
+                    const response = await fetch(
+                        `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                    );
+                    const data = await response.json();
+                    if (!response.ok) return;
+
+                    if (data.startLocation) {
+                        setCustomOrigin({
+                            latitude: data.startLocation.latitude,
+                            longitude: data.startLocation.longitude,
+                        });
+                    }
+
+                    const loadedStops: { latitude: number; longitude: number; label: string }[] =
+                        data.stops.map((stop: any) => ({
+                            latitude: stop.location.latitude,
+                            longitude: stop.location.longitude,
+                            label: stop.location.name,
+                        }));
+
+                    const [first, ...rest] = loadedStops;
+                    if (first) {
+                        setDestination({ latitude: first.latitude, longitude: first.longitude });
+                        setDestinationLabel(first.label);
+                    }
+                    setStops(rest);
+                } catch (error) {
+                    console.error('Load itinerary error:', error);
+                }
+            };
+            loadItinerary();
+        } else {
+            const draft = getTripPlannerDraft();
+            setCustomOrigin(draft.customOrigin);
+            setDestination(draft.destination);
+            setDestinationLabel(draft.destinationLabel);
+            setStops(draft.stops);
+            if (draft.customOrigin) {
+                setRouteStartOrigin(draft.customOrigin);
+                routeStartOriginSetRef.current = true;
+            }
         }
-    }, []);
+    }, [tripId]);
 
     useEffect(() => { legsRef.current = legs; }, [legs]);
     useEffect(() => { legIndexRef.current = legIndex; }, [legIndex]);
@@ -360,9 +400,11 @@ const MapNavigation = () => {
                     </Marker>
                     {routeStartOrigin && routePoints[currentDestIndex] && (
                         <MapViewDirections
+                            key={`route-${currentDestIndex}-${routeStartOrigin.latitude.toFixed(4)}-${routePoints[currentDestIndex]!.latitude.toFixed(4)}`}
                             origin={routeStartOrigin}
                             destination={routePoints[currentDestIndex]!}
                             apikey={GOOGLE_API_KEY}
+                            mode="DRIVING"
                             strokeColor="#0d00ff"
                             strokeWidth={5}
                             onReady={(result) => {
@@ -384,6 +426,7 @@ const MapNavigation = () => {
                                     activeLegIndex: 0,
                                 });
                             }}
+                            onError={(err) => console.error('MapViewDirections error:', err)}
                         />
                     )}
                 </MapView>
@@ -412,9 +455,6 @@ const MapNavigation = () => {
                         <Text style={styles.distanceToTurn}>{distanceToTurn}</Text>
                     ) : null}
                 </View>
-                <HapticPressable hapticStyle="light" style={styles.groupBox} onPress={() => router.push('/maps/convoyEta')}>
-                    <Ionicons name="people" size={20} color="#4285F4" />
-                </HapticPressable>
             </View>}
 
             {!isFollowing && (
@@ -447,7 +487,7 @@ const MapNavigation = () => {
                                 {totalDistanceMi.toFixed(1)} mi · Arrives {eta}
                             </Text>
                         </HapticPressable>
-                        <HapticPressable hapticStyle="medium" onPress={() => router.replace('/maps/mapDirections')} style={styles.exitButton}>
+                        <HapticPressable hapticStyle="medium" onPress={() => router.replace(backRoute as any)} style={styles.exitButton}>
                             <Text style={{ color: THEME.COLOR.white, fontWeight: '600' }}>Exit</Text>
                         </HapticPressable>
                     </View>
@@ -498,7 +538,7 @@ const MapNavigation = () => {
                                     <HapticPressable
                                         hapticStyle="medium"
                                         style={styles.startButton}
-                                        onPress={() => router.replace('/maps/mapDirections')}
+                                        onPress={() => router.replace(backRoute as any)}
                                     >
                                         <Text style={styles.startButtonText}>Done</Text>
                                     </HapticPressable>
@@ -588,6 +628,8 @@ const styles = StyleSheet.create({
     },
     navCard: {
         position: 'absolute',
+        left: 15,
+        right: 15,
         backgroundColor: THEME.COLOR.black,
         borderRadius: 16,
         flexDirection: 'row',
@@ -621,16 +663,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         marginTop: 3,
-    },
-    groupBox: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(59, 130, 246, 0.25)',
     },
     handle: {
         width: 36,

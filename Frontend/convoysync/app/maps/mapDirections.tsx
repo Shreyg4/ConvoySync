@@ -148,10 +148,12 @@ const MapDirections = () => {
 
                 {activeOrigin && routeDestination && (
                     <MapViewDirections
+                        key={`route-${activeOrigin.latitude.toFixed(4)}-${routeDestination.latitude.toFixed(4)}`}
                         origin={activeOrigin}
                         destination={routeDestination}
                         waypoints={routeWaypoints}
                         apikey={GOOGLE_API_KEY}
+                        mode="DRIVING"
                         strokeColor="blue"
                         strokeWidth={5}
                         onReady={(result) => {
@@ -165,6 +167,7 @@ const MapDirections = () => {
                                 animated: true,
                             });
                         }}
+                        onError={(err) => console.error('MapViewDirections error:', err)}
                     />
                 )}
             </MapView>
@@ -175,19 +178,9 @@ const MapDirections = () => {
                     <BackHeader
                         title=""
                         icon="chevron-back"
-                        color={THEME.COLOR.mint}
+                        color={THEME.COLOR.black}
                         onPress={() => router.replace(backRoute)}
                     />
-                    {routeDestination && (
-                        <HapticPressable
-                            hapticStyle="medium"
-                            onPress={() => router.replace('/maps/mapNavigation')}
-                            style={styles.navigateButton}
-                        >
-                            <Ionicons name="navigate" size={14} color={THEME.COLOR.black} />
-                            <Text style={styles.navigateButtonText}>Navigate</Text>
-                        </HapticPressable>
-                    )}
                 </View>
 
                 {!routeDestination && (
