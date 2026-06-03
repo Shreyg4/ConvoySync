@@ -3,7 +3,8 @@ import { Text, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-nativ
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../../styles/globalStyles';
 import HapticPressable from '../../components/pressableCustomization';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiUrl } from '../../lib/api';
+import { authHeader } from '../../lib/oauth';
 import { useRouter } from 'expo-router';
 
 const JoinTrip = () => {
@@ -11,20 +12,19 @@ const JoinTrip = () => {
      const router = useRouter();
 
     const onSubmit = async () => {
-        const userId = await AsyncStorage.getItem("userId");
-
-        if (!userId) {
-            console.log("No userId found");
+        const headers = await authHeader();
+        if (!headers.Authorization) {
+            console.log("Not signed in");
             return;
         }
 
-        const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/join`, {
+        const response = await fetch(apiUrl(`/trips/join`), {
             method: 'POST',
             headers: {
-                    'Content-Type': 'application/json',
+                'Content-Type': 'application/json',
+                ...headers,
             },
             body: JSON.stringify({
-                userId: Number(userId),
                 inviteCode: code,
             })
         });

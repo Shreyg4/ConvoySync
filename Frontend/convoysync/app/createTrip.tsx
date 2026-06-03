@@ -8,7 +8,8 @@ import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiUrl } from '../lib/api';
+import { authHeader } from '../lib/oauth';
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -56,13 +57,19 @@ const CreateTrip = () => {
     // My contribution:
 
     const onSubmit = async (data: any) => {
-        const userId = await AsyncStorage.getItem("userId");
+        const headers = await authHeader();
+        if (!headers.Authorization) {
+            console.log("Not signed in");
+            return;
+        }
 
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`, {
+            // Owner is resolved from the JWT server-side; path id is ignored.
+            const response = await fetch(apiUrl(`/users/me/trips`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...headers,
                 },
                 body: JSON.stringify(data),
             })

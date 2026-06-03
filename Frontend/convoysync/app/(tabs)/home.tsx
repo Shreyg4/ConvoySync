@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../../styles/globalStyles';
 import { Link } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiUrl } from '../../lib/api';
+import { authHeader } from '../../lib/oauth';
 import { useRouter } from "expo-router";
 import { ScrollView } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,15 +28,15 @@ const home = () => {
         useCallback(() => {
             const loadTrips = async () => {
                 try {
-                    const userId = await AsyncStorage.getItem("userId");
-
-                    if (!userId) {
-                        console.log("No userId found");
+                    const headers = await authHeader();
+                    if (!headers.Authorization) {
+                        console.log("Not signed in");
                         return;
                     }
 
                     const response = await fetch(
-                        `${process.env.EXPO_PUBLIC_ADDRESS}/users/${userId}/trips`
+                        apiUrl(`/users/me/trips`),
+                        { headers }
                     );
 
                     const data = await response.json();
