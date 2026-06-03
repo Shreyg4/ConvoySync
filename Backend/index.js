@@ -246,9 +246,10 @@ app.get('/users/:userId', async (req, res) => {
 });
 
 
-// NOTE: MODIFY/REPLACE THIS AFTER AUTH IS IMPLEMENTED
-app.post('/users/:userId/trips', async (req, res) => {
-  const id = parseInt(req.params.userId);
+// Create a trip. Owner is the authenticated user (from the JWT), looked up in
+// the DB by authenticateToken — NOT a client-supplied id.
+app.post('/users/:userId/trips', authenticateToken, async (req, res) => {
+  const id = req.user.id;
   const { tripName, tripDate, tripTime } = req.body;
 
   // need to convert strings to an actual Date
@@ -329,9 +330,9 @@ app.post('/users/:userId/trips', async (req, res) => {
   }
 });
 
-// same instructions as above
-app.get("/users/:userId/trips", async (req, res) => {
-  const userId = parseInt(req.params.userId);
+// List the authenticated user's trips (user resolved from JWT, not the URL).
+app.get("/users/:userId/trips", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
 
   try {
     const memberships = await prisma.tripMember.findMany({
@@ -505,8 +506,8 @@ app.get("/trips/:tripId", async (req, res) => {
   }
 });
 
-app.post("/trips/join", async (req, res) => {
-  const userId = parseInt(req.body.userId);
+app.post("/trips/join", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
   const { inviteCode } = req.body;
 
   try {

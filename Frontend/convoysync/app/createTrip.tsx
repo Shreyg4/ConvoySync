@@ -9,6 +9,7 @@ import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
 import { apiUrl } from '../lib/api';
+import { authHeader } from '../lib/oauth';
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -53,15 +54,14 @@ const CreateTrip = () => {
         hideTimePicker();
     };
 
-    // My contribution:
-    const userId = 1; // use id 1 for testing
-
     const onSubmit = async (data: any) => {
         try {
-            const response = await fetch(apiUrl(`/users/${userId}/trips`), {
+            // Owner is resolved from the JWT server-side; the path id is ignored.
+            const response = await fetch(apiUrl(`/users/me/trips`), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(await authHeader()),
                 },
                 body: JSON.stringify(data),
             })

@@ -40,8 +40,11 @@ const Login = () => {
                 return;
             }
 
-            // Avoid doing this in actual production code.
-            await AsyncStorage.setItem("userId", String(text.id));
+            // Persist the JWT so authenticated requests (trips, etc.) work.
+            if (text.token) {
+                await AsyncStorage.setItem("token", text.token);
+            }
+            await AsyncStorage.setItem("userId", String(text.user?.id ?? text.id));
 
             router.push('/home');
 

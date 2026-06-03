@@ -10,6 +10,7 @@ import { ScrollView } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback } from 'react';
 import { apiUrl } from '../../lib/api';
+import { authHeader } from '../../lib/oauth';
 
 type Trip = {
     id: number;
@@ -28,15 +29,16 @@ const home = () => {
         useCallback(() => {
             const loadTrips = async () => {
                 try {
-                    const userId = await AsyncStorage.getItem("userId");
+                    const headers = await authHeader();
 
-                    if (!userId) {
-                        console.log("No userId found");
+                    if (!headers.Authorization) {
+                        console.log("Not signed in");
                         return;
                     }
 
                     const response = await fetch(
-                        apiUrl(`/users/${userId}/trips`)
+                        apiUrl(`/users/me/trips`),
+                        { headers }
                     );
 
                     const data = await response.json();

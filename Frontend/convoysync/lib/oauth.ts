@@ -2,6 +2,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as Linking from 'expo-linking';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Lets the auth session finish cleanly when the browser redirects back.
 WebBrowser.maybeCompleteAuthSession();
@@ -17,12 +18,24 @@ export type OAuthResult =
   | { ok: true; token: string }
   | { ok: false; reason: 'cancelled' | 'error'; message?: string };
 
+// Returns the stored JWT regardless of how the user signed in:
+// OAuth saves it in SecureStore; email/password login saves it in AsyncStorage.
 export async function getToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  const secure = await SecureStore.getItemAsync(TOKEN_KEY);
+  if (secure) return secure;
+  return AsyncStorage.getItem(TOKEN_KEY);
+}
+
+// Convenience: an Authorization header object for fetch, or {} if not signed in.
+export async function authHeader(): Promise<Record<string, string>> {
+  const token = await getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export async function signOut(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await AsyncStorage.removeItem(TOKEN_KEY);
+  await AsyncStorage.removeItem('userId');
 }
 
 /**
