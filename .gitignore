@@ -2,7 +2,6 @@ node_modules/
 **/node_modules/
 .env
 **/.env
-firebaseServiceAccountKey.json
 .DS_Store
 **/.DS_Store
 *old*.prisma
