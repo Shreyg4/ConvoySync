@@ -57,6 +57,44 @@ async function authenticateToken(req, res, next) {
   }
 }
 
+// Authorization middleware factory for trip-scoped routes. Runs AFTER
+// authenticateToken, so req.user is set. It confirms the authenticated user
+// actually belongs to the trip named in :tripId before the handler runs, which
+// stops anyone from reading or editing a trip they aren't part of.
+//
+// Pass { ownerOnly: true } to additionally require the "owner" role (used for
+// itinerary edits). On success it attaches req.tripId (parsed) and req.membership.
+function requireTripMember({ ownerOnly = false } = {}) {
+  return async (req, res, next) => {
+    const tripId = parseInt(req.params.tripId, 10);
+
+    if (Number.isNaN(tripId)) {
+      return res.status(400).json({ error: 'Invalid trip id' });
+    }
+
+    try {
+      const membership = await prisma.tripMember.findUnique({
+        where: { tripId_userId: { tripId, userId: req.user.id } },
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: 'You are not a member of this trip' });
+      }
+
+      if (ownerOnly && membership.role !== 'owner') {
+        return res.status(403).json({ error: 'Only the trip owner can do this' });
+      }
+
+      req.tripId = tripId;
+      req.membership = membership;
+      next();
+    } catch (error) {
+      console.error('Authorization error:', error);
+      return res.status(500).json({ error: 'Could not verify trip access' });
+    }
+  };
+}
+
 //POST: auth signup
 app.post('/auth/signup', async (req, res) => {
   const { email, name, password } = req.body;
@@ -317,8 +355,8 @@ app.get("/users/:userId/trips", authenticateToken, async (req, res) => {
   }
 });
 
-app.put("/trips/:tripId/itinerary/stops", async (req, res) => {
-  const tripId = parseInt(req.params.tripId);
+app.put("/trips/:tripId/itinerary/stops", authenticateToken, requireTripMember({ ownerOnly: true }), async (req, res) => {
+  const tripId = req.tripId;
   const { startLocation, stops } = req.body;
 
   if (!Array.isArray(stops)) {
@@ -397,8 +435,8 @@ app.put("/trips/:tripId/itinerary/stops", async (req, res) => {
 });
 
 // for retrieving the stops from a specified tripId
-app.get("/trips/:tripId/itinerary/stops", async (req, res) => {
-  const tripId = parseInt(req.params.tripId);
+app.get("/trips/:tripId/itinerary/stops", authenticateToken, requireTripMember(), async (req, res) => {
+  const tripId = req.tripId;
 
   try {
     const trip = await prisma.trip.findUnique({
