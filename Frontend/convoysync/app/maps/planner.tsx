@@ -478,15 +478,6 @@ const Planner = () => {
                                 </Text>
                             </View>
                         </HapticPressable>
-
-                        <HapticPressable
-                            style={[styles.mapButton, hasRoute && styles.mapButtonActive]}
-                            hapticStyle="medium"
-                            disabled={!hasRoute}
-                            onPress={() => router.push({ pathname: '/maps/mapDirections', params: { tripId, returnTo: 'planner' } })}
-                        >
-                            <Ionicons name="map" size={22} color={hasRoute ? THEME.COLOR.mint : THEME.COLOR.neutral500} />
-                        </HapticPressable>
                     </View>
                 </View>
 
@@ -575,19 +566,6 @@ const styles = StyleSheet.create({
     },
     addStopPressable: {
         flex: 1,
-    },
-    mapButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        borderStyle: 'dashed',
-        borderWidth: 1,
-        borderColor: THEME.COLOR.neutral500,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    mapButtonActive: {
-        borderColor: THEME.COLOR.mint,
     },
     addStopButtonDisabled: {
         backgroundColor: 'rgba(100,100,100,0.1)',

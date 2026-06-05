@@ -41,7 +41,7 @@ In `.env`, set:
 
 | Variable | Description |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | Backend URL — use the hosted one: `https://convoysync.onrender.com` |
+| `EXPO_PUBLIC_API_URL` | Backend URL — `https://convoysync.onrender.com` |
 | `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | Your Google Maps key (Places API + Directions API enabled) |
 
 From the Expo dev server, scan the QR code. It opens a page prompting you to choose
@@ -51,7 +51,7 @@ Android emulator, or `w` for web.
 
 ---
 
-## Walkthrough (demoing the proposal tasks)
+## Walkthrough
 
 With the app running (`npx expo start`):
 
