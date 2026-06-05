@@ -9,6 +9,7 @@ import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
 import { apiUrl } from '../../lib/api';
+import { authHeader } from '../../lib/oauth';
 import { consumeSelectedMapPlace } from './mapSearchSelectionStore';
 import {
     type RouteSelectionTarget,
@@ -61,9 +62,10 @@ const Planner = () => {
         if (isSaving || isSaved) return;
         setIsSaving(true);
         try {
+            const headers = await authHeader();
             const response = await fetch(apiUrl(`/trips/${tripId}/itinerary/stops`), {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...headers },
                 body: JSON.stringify({
                     startLocation: customOrigin ? {
                         name: originLabel,
@@ -118,8 +120,10 @@ const Planner = () => {
 
         const loadItineraryStops = async () => {
             try {
+                const headers = await authHeader();
                 const response = await fetch(
-                    apiUrl(`/trips/${tripId}/itinerary/stops`)
+                    apiUrl(`/trips/${tripId}/itinerary/stops`),
+                    { headers }
                 );
 
                 const data = await response.json();

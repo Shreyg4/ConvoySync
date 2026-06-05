@@ -104,9 +104,9 @@ app.post('/auth/signup', async (req, res) => {
   } catch (error) {
     console.error("Signup error:", error);
 
-    // Handle duplicate email
+    // Handle duplicate email (409 Conflict)
     if (error.code === 'P2002') {
-      return res.status(400).json({ error: "Email already exists" });
+      return res.status(409).json({ error: "Email already exists" });
     }
 
     res.status(400).json({ error: "Could not create user account" });
@@ -206,9 +206,18 @@ app.post('/users/:userId/trips', authenticateToken, async (req, res) => {
   const id = req.user.id;
   const { tripName, tripDate, tripTime } = req.body;
 
+  // Validate input before touching the DB.
+  if (!tripName || !tripName.trim()) {
+    return res.status(400).json({ error: "Trip name is required" });
+  }
+
   // need to convert strings to an actual Date
   const convertedDate = new Date(tripDate);
   const convertedTime = new Date(tripTime);
+
+  if (Number.isNaN(convertedDate.getTime()) || Number.isNaN(convertedTime.getTime())) {
+    return res.status(400).json({ error: "A valid trip date and time are required" });
+  }
 
   const combinedDateTime = new Date(convertedDate);
 
@@ -421,8 +430,8 @@ app.get("/trips/:tripId/itinerary/stops", async (req, res) => {
   }
 });
 
-app.get("/trips/:tripId", async (req, res) => {
-  const tripId = parseInt(req.params.tripId);
+app.get("/trips/:tripId", authenticateToken, requireTripMember(), async (req, res) => {
+  const tripId = req.tripId;
 
   try {
     const trip = await prisma.trip.findUnique({
@@ -431,7 +440,8 @@ app.get("/trips/:tripId", async (req, res) => {
         startLocation: true,
         members: {
           include: {
-            user: true,
+            // Only expose safe user fields — never pwHash.
+            user: { select: { id: true, name: true, email: true } },
           },
         },
         itinerary: {
@@ -464,10 +474,14 @@ app.post("/trips/join", authenticateToken, async (req, res) => {
   const userId = req.user.id;
   const { inviteCode } = req.body;
 
+  if (!inviteCode || !inviteCode.trim()) {
+    return res.status(400).json({ error: "An invite code is required" });
+  }
+
   try {
     const trip = await prisma.trip.findUnique({
       where: {
-        inviteCode,
+        inviteCode: inviteCode.trim(),
       },
     });
 
@@ -490,6 +504,11 @@ app.post("/trips/join", authenticateToken, async (req, res) => {
       member,
     });
   } catch (error) {
+    // Composite (tripId, userId) PK violation = the user already joined this trip.
+    if (error.code === "P2002") {
+      return res.status(409).json({ error: "You have already joined this trip" });
+    }
+
     console.error("Join trip error:", error);
     return res.status(400).json({ error: "Could not join trip" });
   }
@@ -514,6 +533,8 @@ app.listen(PORT, () => {
   POST   /users/:userId/trips   - Create trip         (req auth)
   GET    /users/:userId/trips   - List user trips     (req auth)
   POST   /trips/join            - Join trip by code   (req auth)
-  GET    /trips/:tripId         - Get trip details
+  GET    /trips/:tripId         - Get trip details    (req auth, member)
+  GET    /trips/:tripId/itinerary/stops - Get stops   (req auth, member)
+  PUT    /trips/:tripId/itinerary/stops - Save stops  (req auth, owner)
   `);
 });

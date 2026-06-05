@@ -10,6 +10,7 @@ import { getTripPlannerDraft } from './maps/tripPlannerStore';
 import { globalStyles } from '@/styles/globalStyles';
 import { useLocalSearchParams } from 'expo-router';
 import { apiUrl } from '@/lib/api';
+import { authHeader } from '@/lib/oauth';
 
 type PartyMember = {
     id: string;
@@ -85,7 +86,8 @@ const TripInfo = () => {
     const loadTrip = useCallback(async () => {
         if (!tripId) return;
         try {
-            const response = await fetch(apiUrl(`/trips/${tripId}`));
+            const headers = await authHeader();
+            const response = await fetch(apiUrl(`/trips/${tripId}`), { headers });
             const data = await response.json();
             if (!response.ok) {
                 console.log("status:", response.status);
