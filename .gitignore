@@ -7,3 +7,4 @@ firebaseServiceAccountKey.json
 **/.DS_Store
 *old*.prisma
 Backend/*.tsx
+IMPROVEMENT_PLAN.md

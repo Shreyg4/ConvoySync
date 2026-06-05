@@ -28,7 +28,9 @@ const Register = () => {
         }
 
         try {
-            const response = await fetch(apiUrl('/users'), {
+            // /auth/signup creates the account AND returns a JWT, so the new user
+            // is authenticated immediately. (/users does neither and is being removed.)
+            const response = await fetch(apiUrl('/auth/signup'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -43,9 +45,7 @@ const Register = () => {
             const text = await response.json();
 
             if (!response.ok) {
-                // handle
-                console.log('status:', response.status);
-                console.log('body:', text);
+                Alert.alert('Registration failed', text.error || 'Please try again');
                 return;
             }
 
@@ -55,6 +55,7 @@ const Register = () => {
             await AsyncStorage.setItem("userId", String(text.user?.id ?? text.id));
         } catch (error) {
             console.error('Network error:', error);
+            Alert.alert('Network error', 'Could not reach the server. Please try again.');
             return;
         }
 

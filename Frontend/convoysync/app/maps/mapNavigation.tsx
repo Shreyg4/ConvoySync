@@ -12,6 +12,7 @@ import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
 import { setNavState } from './navigationStore';
 import { mapStyles } from '@/styles/mapStyles';
+import { apiUrl } from '@/lib/api';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const ADVANCE_THRESHOLD_METERS = 40;
@@ -156,7 +157,7 @@ const MapNavigation = () => {
             const loadItinerary = async () => {
                 try {
                     const response = await fetch(
-                        `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                        apiUrl(`/trips/${tripId}/itinerary/stops`)
                     );
                     const data = await response.json();
                     if (!response.ok) return;

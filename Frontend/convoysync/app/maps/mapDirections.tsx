@@ -12,6 +12,7 @@ import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
+import { apiUrl } from '../../lib/api';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const STOP_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
@@ -69,7 +70,7 @@ const MapDirections = () => {
                 const loadItinerary = async () => {
                     try {
                         const response = await fetch(
-                            `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                            apiUrl(`/trips/${tripId}/itinerary/stops`)
                         );
                         const data = await response.json();
                         if (!response.ok) return;

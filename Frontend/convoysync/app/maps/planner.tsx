@@ -8,6 +8,7 @@ import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
+import { apiUrl } from '../../lib/api';
 import { consumeSelectedMapPlace } from './mapSearchSelectionStore';
 import {
     type RouteSelectionTarget,
@@ -60,7 +61,7 @@ const Planner = () => {
         if (isSaving || isSaved) return;
         setIsSaving(true);
         try {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`, {
+            const response = await fetch(apiUrl(`/trips/${tripId}/itinerary/stops`), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -118,7 +119,7 @@ const Planner = () => {
         const loadItineraryStops = async () => {
             try {
                 const response = await fetch(
-                    `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}/itinerary/stops`
+                    apiUrl(`/trips/${tripId}/itinerary/stops`)
                 );
 
                 const data = await response.json();

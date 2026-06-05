@@ -9,6 +9,7 @@ import { THEME } from '@/theme';
 import { getTripPlannerDraft } from './maps/tripPlannerStore';
 import { globalStyles } from '@/styles/globalStyles';
 import { useLocalSearchParams } from 'expo-router';
+import { apiUrl } from '@/lib/api';
 
 type PartyMember = {
     id: string;
@@ -84,9 +85,7 @@ const TripInfo = () => {
     const loadTrip = useCallback(async () => {
         if (!tripId) return;
         try {
-            const response = await fetch(
-                `${process.env.EXPO_PUBLIC_ADDRESS}/trips/${tripId}`
-            );
+            const response = await fetch(apiUrl(`/trips/${tripId}`));
             const data = await response.json();
             if (!response.ok) {
                 console.log("status:", response.status);

@@ -195,56 +195,10 @@ app.put('/auth/profile', authenticateToken, async (req, res) => {
 // OAuth routes (Google / GitHub)
 app.use('/oauth', oauthRoutes);
 
-// POST: create a user
-app.post('/users', async (req, res) => {
-  const { email, name, password } = req.body;
-  const hash = await bcrypt.hash(password, 10);
-
-  try {
-    const newUser = await prisma.user.create({
-      data: {
-        email: email,
-        name: name,
-        pwHash: hash,
-      },
-    });
-
-    res.status(201).json(newUser);
-  } catch (error) {
-    if (error.code === 'P2002') {
-      return res.status(409).json({
-        error: 'Email already tied to an existing account',
-      });
-    }
-
-    console.error("Database write error:", error);
-    res.status(400).json({ error: "Could not create user account" });
-  }
-});
-
-// GET: retrieve a user
-app.get('/users/:userId', async (req, res) => {
-  try {
-    const id = parseInt(req.params.userId);
-    const user = await prisma.user.findUnique({
-      where: {
-        id: id,
-      },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        error: "User not found",
-      });
-    };
-
-    res.status(200).json(user);
-  } catch (error) {
-      console.error("Database read error:", error);
-      res.status(400).json({ error: "Could not get user account" });
-  }
-});
-
+// NOTE: Account creation goes through POST /auth/signup (above), which hashes the
+// password, validates input, and returns a JWT. The old unauthenticated
+// POST /users and GET /users/:userId routes were removed in Phase 0 — the latter
+// leaked pwHash, and both duplicated the auth flow.
 
 // Create a trip. Owner is the authenticated user (from the JWT), looked up in
 // the DB by authenticateToken — NOT a client-supplied id.
@@ -557,9 +511,9 @@ app.listen(PORT, () => {
   PUT    /auth/profile          - Update profile      (req auth)
   GET    /oauth/google          - Google OAuth start
   GET    /oauth/github          - GitHub OAuth start
-  POST   /users                 - Create user
-  GET    /users/:userId         - Get user
-  POST   /users/:userId/trips   - Create trip
-  GET    /users/:userId/trips   - List user trips
+  POST   /users/:userId/trips   - Create trip         (req auth)
+  GET    /users/:userId/trips   - List user trips     (req auth)
+  POST   /trips/join            - Join trip by code   (req auth)
+  GET    /trips/:tripId         - Get trip details
   `);
 });
