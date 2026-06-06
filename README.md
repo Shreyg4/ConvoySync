@@ -70,3 +70,28 @@ With the app running (`npx expo start`):
 6. **Log out** — *Settings* → *Log out* clears the stored session.
 
 ---
+
+## Roadmap & known limitations
+
+These features were **part of our original design** — the database schema was built to
+support them from the start — but they were **scoped out of the MVP** so we could ship a
+solid, working core (auth, trip creation/joining, collaborative itinerary planning, and
+live navigation). They are intentional next steps, not abandoned work:
+
+- **Live member status sharing.** The schema already models this with the
+  `MemberTripStatus` table (per-member location, ETA, and status like `ENROUTE`/`ARRIVED`).
+  The plan is to broadcast each member's position so the whole convoy can see one another
+  on the map in real time. The data model is ready; the API endpoints and UI are not yet
+  wired up.
+- **Reroute voting.** Modeled by the `RerouteRequest` and `RerouteVote` tables — a member
+  proposes a detour/new stop, the group votes, and the itinerary updates on a majority.
+  Again, the schema is in place; the voting flow is future work.
+- **Computed ETAs.** Itinerary stop ETAs are currently placeholder values. The intended
+  implementation derives them from the Google Directions API already used on the
+  navigation screen.
+
+We deliberately designed the data model to accommodate all of the above so these features
+can be layered on without reworking the schema — we simply could not get to them within
+the MVP timeframe.
+
+---

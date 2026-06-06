@@ -1,27 +1,16 @@
-import { Text } from 'react-native'
-import { useState } from "react";
+import React, { useState, useCallback } from 'react';
+import { Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link, useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { globalStyles } from '../../styles/globalStyles';
-import { Link } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
 import { apiFetch, ApiError } from '../../lib/api';
 import { signOut } from '../../lib/oauth';
-import { useRouter } from "expo-router";
-import { ScrollView } from "react-native";
-import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback } from 'react';
-
-type Trip = {
-    id: number;
-    name: string;
-    inviteCode: string;
-    estStart: string;
-    status: string;
-    role: "owner" | "member";
-};
+import type { TripSummary } from '../../lib/types';
 
 const Home = () => {
-    const [trips, setTrips] = useState<Trip[]>([]);
+    const [trips, setTrips] = useState<TripSummary[]>([]);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const router = useRouter();
 

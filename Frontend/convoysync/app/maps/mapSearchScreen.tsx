@@ -51,6 +51,15 @@ const MapSearchScreen = () => {
     const router = useRouter();
     const params = useLocalSearchParams<{ placeholder?: string; currentText?: string | string[] }>();
     const searchRef = useRef<GooglePlacesTextInputRef>(null);
+    // Guards against dispatching GO_BACK when there's nothing to pop (e.g. after a
+    // dev hot-reload resets the stack) and against a double back from two handlers.
+    const navigatedRef = useRef(false);
+    const goBack = () => {
+        if (navigatedRef.current) return;
+        if (!router.canGoBack()) return; // nothing to pop (only happens after a dev reload)
+        navigatedRef.current = true;
+        router.back();
+    };
     const initialText = Array.isArray(params.currentText) ? params.currentText[0] || '' : params.currentText || '';
     const showUseMyLocation = params.placeholder?.includes('Origin') || params.placeholder === 'Your Location';
     const suggestionsContainerStyle = showUseMyLocation
@@ -73,7 +82,7 @@ const MapSearchScreen = () => {
                         title=""
                         icon='chevron-back'
                         color={THEME.COLOR.mint}
-                        onPress={() => router.back()}
+                        onPress={goBack}
                     />
                 </View>
 
@@ -96,7 +105,7 @@ const MapSearchScreen = () => {
                                 longitude: place.details.location.longitude,
                                 description: getPlaceLabel(place),
                             });
-                            router.back();
+                            goBack();
                         }
                     }}
                     onError={(error: any) => console.error('Google Places Error:', error)}
@@ -124,18 +133,24 @@ const MapSearchScreen = () => {
                                         return;
                                     }
 
-                                    let location = await Location.getCurrentPositionAsync({});
-                                    const currentLoc = {
-                                        latitude: location.coords.latitude,
-                                        longitude: location.coords.longitude,
-                                    };
+                                    // Android's getCurrentPositionAsync can take several
+                                    // seconds for a cold GPS fix (iOS returns a fused
+                                    // location almost instantly). Use the last known
+                                    // position first — instant when available — and only
+                                    // fall back to a fresh balanced-accuracy fix if needed.
+                                    let location = await Location.getLastKnownPositionAsync({ maxAge: 60000 });
+                                    if (!location) {
+                                        location = await Location.getCurrentPositionAsync({
+                                            accuracy: Location.Accuracy.Balanced,
+                                        });
+                                    }
 
                                     setSelectedMapPlace({
-                                        latitude: currentLoc.latitude,
-                                        longitude: currentLoc.longitude,
+                                        latitude: location.coords.latitude,
+                                        longitude: location.coords.longitude,
                                         description: 'Your Location',
                                     });
-                                    router.back();
+                                    goBack();
                                 } catch (e) {
                                     console.log('Error fetching location', e);
                                 }

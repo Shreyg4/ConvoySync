@@ -12,5 +12,3 @@ const adapter = new PrismaPg(pool); // driver-to-prisma
 const prisma = new PrismaClient({ adapter }); // pass our adapter to the client, so we know how to communicate
 
 module.exports = prisma; // commonjs notation export
-
-// TODO: Need DB password
