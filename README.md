@@ -34,7 +34,7 @@ backend setup to run the app.
 cd Frontend/convoysync
 npm install
 cp .env.example .env        # then set the two values below
-npx expo start --go         # scan the QR code with Expo Go (or press i / a / w)
+npx expo start --go         # scan the QR code with Expo Go
 ```
 
 In `.env`, set:
@@ -46,8 +46,7 @@ In `.env`, set:
 
 From the Expo dev server, scan the QR code. It opens a page prompting you to choose
 between **Development build** and **Expo Go** — choose **Expo Go** (the app takes a few
-seconds to bundle and load). You can also press `i` for an iOS simulator, `a` for an
-Android emulator, or `w` for web.
+seconds to bundle and load).
 
 ---
 
