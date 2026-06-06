@@ -113,6 +113,7 @@ const MapNavigation = () => {
     const [routeStartOrigin, setRouteStartOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const routeStartOriginSetRef = useRef(false);
     const [distanceToNextTurn, setDistanceToNextTurn] = useState<number | null>(null);
+    const [routeError, setRouteError] = useState<string | null>(null);
 
     const setFollowing = (val: boolean) => {
         isFollowingRef.current = val;
@@ -458,6 +459,7 @@ const MapNavigation = () => {
                             strokeColor="#0d00ff"
                             strokeWidth={5}
                             onReady={(result) => {
+                                setRouteError(null);
                                 const fetchedLegs = (result as any).legs ?? [];
                                 const distMi = result.distance * 0.621371;
                                 setLegs(fetchedLegs);
@@ -478,7 +480,14 @@ const MapNavigation = () => {
                                     activeLegIndex: 0,
                                 });
                             }}
-                            onError={(err) => console.error('MapViewDirections error:', err)}
+                            onError={() => {
+                                setRouteError('No driving route was found for this destination. It may be outside routable roads, private, closed, or unreachable by car.');
+                                setRemainingDuration(0);
+                                setTotalDistanceMi(0);
+                                setDistanceToNextTurn(null);
+                                setLegs([]);
+                                legsRef.current = [];
+                            }}
                         />
                     )}
                 </MapView>
@@ -491,7 +500,26 @@ const MapNavigation = () => {
             )}
 
             {/* Top navigation card */}
-            {!arrived && <View style={[styles.navCard, { top: navTop }]}>
+            {routeError && (
+                <View style={[styles.routeErrorCard, { top: navTop }]}>
+                    <View style={styles.routeErrorIcon}>
+                        <Ionicons name="alert-circle" size={22} color={THEME.COLOR.error} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.routeErrorTitle}>Route unavailable</Text>
+                        <Text style={styles.routeErrorText}>{routeError}</Text>
+                    </View>
+                    <HapticPressable
+                        hapticStyle="medium"
+                        style={styles.routeErrorExitButton}
+                        onPress={() => router.replace(backRoute as any)}
+                    >
+                        <Text style={styles.routeErrorExitText}>Back</Text>
+                    </HapticPressable>
+                </View>
+            )}
+
+            {!arrived && !routeError && <View style={[styles.navCard, { top: navTop }]}>
                 <View style={styles.maneuverBox}>
                     <Ionicons
                         name={getManeuverIcon(displayStep?.maneuver)}
@@ -526,7 +554,7 @@ const MapNavigation = () => {
                 </HapticPressable>
             )}
 
-            {remainingDuration > 0 && (
+            {remainingDuration > 0 && !routeError && (
                 <View
                     style={statsExpanded ? globalStyles.tripInfoCardExpanded : globalStyles.tripInfoCard}
                     onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
@@ -657,6 +685,52 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         gap: 10,
         borderWidth: 1,
+    },
+    routeErrorCard: {
+        position: 'absolute',
+        left: 15,
+        right: 15,
+        backgroundColor: THEME.COLOR.black,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.45)',
+        zIndex: 35,
+        elevation: 35,
+    },
+    routeErrorIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    routeErrorTitle: {
+        color: THEME.COLOR.white,
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    routeErrorText: {
+        color: THEME.COLOR.neutral400,
+        fontSize: 12,
+        lineHeight: 17,
+        marginTop: 2,
+    },
+    routeErrorExitButton: {
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 14,
+    },
+    routeErrorExitText: {
+        color: THEME.COLOR.black,
+        fontSize: 13,
+        fontWeight: '700',
     },
     maneuverBox: {
         width: 50,

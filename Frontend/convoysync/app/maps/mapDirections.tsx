@@ -67,6 +67,7 @@ const MapDirections = () => {
     const [legIndex, setLegIndex] = useState(0);
     const [cardHeight, setCardHeight] = useState(0);
     const [initialLocationReady, setInitialLocationReady] = useState(false);
+    const [routeError, setRouteError] = useState<string | null>(null);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -215,6 +216,7 @@ const MapDirections = () => {
                         strokeColor="blue"
                         strokeWidth={5}
                         onReady={(result) => {
+                            setRouteError(null);
                             setDistance(result.distance);
                             setDuration(result.duration);
                             setLegs((result as any).legs ?? []);
@@ -225,7 +227,12 @@ const MapDirections = () => {
                                 animated: true,
                             });
                         }}
-                        onError={(err) => console.error('MapViewDirections error:', err)}
+                        onError={() => {
+                            setDistance(0);
+                            setDuration(0);
+                            setLegs([]);
+                            setRouteError('No driving route was found for this destination. It may be outside routable roads, private, closed, or unreachable by car.');
+                        }}
                     />
                 )}
             </MapView>
@@ -247,9 +254,24 @@ const MapDirections = () => {
                         <Text style={styles.emptySubtitle}>Add your trip stops in Planner to preview the route here.</Text>
                     </View>
                 )}
+
+                {routeDestination && routeError && (
+                    <View style={styles.emptyCard}>
+                        <Text style={styles.emptyTitle}>Route unavailable</Text>
+                        <Text style={styles.emptySubtitle}>{routeError}</Text>
+                        <HapticPressable
+                            hapticStyle="medium"
+                            style={styles.errorBackButton}
+                            onPress={goBack}
+                        >
+                            <Ionicons name="arrow-back" size={17} color={THEME.COLOR.black} />
+                            <Text style={styles.errorBackButtonText}>Choose another destination</Text>
+                        </HapticPressable>
+                    </View>
+                )}
             </SafeAreaView>
 
-            {distance > 0 && duration > 0 && routeDestination && (
+            {distance > 0 && duration > 0 && routeDestination && !routeError && (
                 <View
                     style={expanded ? globalStyles.tripInfoCardExpanded : globalStyles.tripInfoCard}
                     onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
@@ -361,6 +383,22 @@ const styles = StyleSheet.create({
         color: THEME.COLOR.neutral400,
         fontSize: 14,
         lineHeight: 20,
+    },
+    errorBackButton: {
+        marginTop: 14,
+        backgroundColor: THEME.COLOR.mint,
+        borderRadius: 16,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    errorBackButtonText: {
+        color: THEME.COLOR.black,
+        fontSize: 14,
+        fontWeight: '700',
     },
     handle: {
         width: 36,
