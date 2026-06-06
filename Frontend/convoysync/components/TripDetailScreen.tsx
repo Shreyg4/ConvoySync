@@ -260,11 +260,6 @@ const styles = StyleSheet.create({
     reloadButton: {
         padding: THEME.SPACING.sm,
     },
-    backText: {
-        color: THEME.COLOR.mint,
-        fontSize: THEME.FONT_SIZE.md,
-        fontWeight: '600',
-    },
     hero: {
         marginTop: THEME.SPACING.md,
         marginBottom: THEME.SPACING.lg,

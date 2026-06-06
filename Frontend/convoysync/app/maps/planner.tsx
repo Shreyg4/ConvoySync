@@ -6,7 +6,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
-import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
 import { apiFetch, ApiError } from '../../lib/api';
 import { consumeSelectedMapPlace } from './mapSearchSelectionStore';
@@ -354,7 +353,7 @@ const Planner = () => {
     return (
         <View style={styles.screen}>
             <SafeAreaView style={styles.safeArea}>
-                <View style={mapStyles.plannerHeader}>
+                <View style={styles.plannerHeader}>
                     <BackHeader
                         title="Planner"
                         icon="chevron-back"
@@ -364,7 +363,7 @@ const Planner = () => {
 
                 <View style={styles.panel}>
                     <ScrollView
-                        style={mapStyles.routingScrollArea}
+                        style={styles.routingScrollArea}
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
@@ -376,8 +375,8 @@ const Planner = () => {
                                 onPress={() => openSearchScreen({ kind: 'origin' })}
                                 style={styles.inputPressable}
                             >
-                                <View style={mapStyles.routingInputContainer}>
-                                    <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2, styles.inputText]}>
+                                <View style={styles.routingInputContainer}>
+                                    <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.textInput2, styles.inputText]}>
                                         {originLabel}
                                     </Text>
                                 </View>
@@ -388,7 +387,7 @@ const Planner = () => {
                             <View style={styles.leadingSpacer}>
                                 {activeStops.length > 0 ? (
                                     <HapticPressable hapticStyle="light" onPress={deleteDestination}>
-                                        <View style={mapStyles.stopDeleteButton}>
+                                        <View style={styles.stopDeleteButton}>
                                             <Ionicons name="close" size={20} color={THEME.COLOR.neutral500} />
                                         </View>
                                     </HapticPressable>
@@ -400,7 +399,7 @@ const Planner = () => {
                                 onPress={() => openSearchScreen({ kind: 'destination' })}
                                 style={styles.inputPressable}
                             >
-                                <View style={mapStyles.routingInputContainer}>
+                                <View style={styles.routingInputContainer}>
                                     <View style={styles.destinationRow}>
                                         {activeStops.length > 0 && (
                                             <View style={styles.destinationDot} />
@@ -409,7 +408,7 @@ const Planner = () => {
                                             numberOfLines={1}
                                             ellipsizeMode="tail"
                                             style={[
-                                                mapStyles.textInput2,
+                                                styles.textInput2,
                                                 styles.inputText,
                                                 !destination && styles.placeholderText,
                                             ]}
@@ -425,7 +424,7 @@ const Planner = () => {
                             <View key={`${stop.label}-${index}`} style={styles.inputRow}>
                                 <View style={styles.leadingSpacer}>
                                     <HapticPressable hapticStyle="light" onPress={() => deleteStop(index)}>
-                                        <View style={mapStyles.stopDeleteButton}>
+                                        <View style={styles.stopDeleteButton}>
                                             <Ionicons name="close" size={20} color={THEME.COLOR.neutral500} />
                                         </View>
                                     </HapticPressable>
@@ -436,10 +435,10 @@ const Planner = () => {
                                     onPress={() => openSearchScreen({ kind: 'stop', stopIndex: index })}
                                     style={styles.inputPressable}
                                 >
-                                    <View style={mapStyles.routingInputContainer}>
+                                    <View style={styles.routingInputContainer}>
                                         <View style={styles.destinationRow}>
                                             <View style={[styles.stopDot, { backgroundColor: getStopColor(index) }]} />
-                                            <Text numberOfLines={1} ellipsizeMode="tail" style={[mapStyles.textInput2, styles.inputText]}>
+                                            <Text numberOfLines={1} ellipsizeMode="tail" style={[styles.textInput2, styles.inputText]}>
                                                 {stop.label}
                                             </Text>
                                         </View>
@@ -456,8 +455,8 @@ const Planner = () => {
                             disabled={addStopDisabled}
                             style={styles.addStopPressable}
                         >
-                            <View style={[mapStyles.addStopButton, { marginHorizontal: 0 }, addStopDisabled && styles.addStopButtonDisabled]}>
-                                <Text style={[mapStyles.addStopButtonText, addStopDisabled && styles.addStopButtonTextDisabled]}>
+                            <View style={[styles.addStopButton, { marginHorizontal: 0 }, addStopDisabled && styles.addStopButtonDisabled]}>
+                                <Text style={[styles.addStopButtonText, addStopDisabled && styles.addStopButtonTextDisabled]}>
                                     {(destination ? 1 : 0) + stops.length >= MAX_STOPS ? 'Max 5 stops reached' : '+ Add stop'}
                                 </Text>
                             </View>
@@ -486,6 +485,52 @@ const Planner = () => {
 };
 
 const styles = StyleSheet.create({
+    textInput2: {
+        top: 16,
+        height: 50,
+        color: THEME.COLOR.neutral400,
+        fontSize: 16,
+        backgroundColor: 'transparent',
+        width: '100%',
+    },
+    routingScrollArea: {
+        flex: 1,
+    },
+    routingInputContainer: {
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        marginHorizontal: 15,
+        backgroundColor: THEME.COLOR.black,
+        borderWidth: 1,
+        borderColor: THEME.COLOR.mint,
+    },
+    stopDeleteButton: {
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    addStopButton: {
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        paddingVertical: 16,
+        marginHorizontal: 15,
+        backgroundColor: 'rgba(16, 185, 129, 0.16)',
+        borderWidth: 1,
+        borderColor: THEME.COLOR.mint,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    addStopButtonText: {
+        color: THEME.COLOR.mint,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    plannerHeader: {
+        paddingHorizontal: THEME.SPACING.md,
+        paddingTop: THEME.SPACING.sm,
+        paddingBottom: THEME.SPACING.sm,
+    },
     screen: {
         flex: 1,
         backgroundColor: THEME.COLOR.black,
@@ -531,7 +576,7 @@ const styles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#ef4444',
+        backgroundColor: THEME.COLOR.error,
         marginRight: 10,
     },
     stopDot: {

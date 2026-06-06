@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { globalStyles } from '../../styles/globalStyles';
+import { THEME } from '../../theme';
 import HapticPressable from '../../components/pressableCustomization';
 import { apiFetch, ApiError } from '../../lib/api';
 import { signOut } from '../../lib/oauth';
@@ -46,7 +47,7 @@ const Home = () => {
                 showsVerticalScrollIndicator={true}
             >
                 {errorMsg ? (
-                    <Text style={[globalStyles.title, { color: '#ef4444' }]}>{errorMsg}</Text>
+                    <Text style={[globalStyles.title, { color: THEME.COLOR.error }]}>{errorMsg}</Text>
                 ) : trips.length > 0 ? (
                     trips.map((trip) => (
                         <HapticPressable

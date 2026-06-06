@@ -11,7 +11,7 @@ import HapticPressable from '@/components/pressableCustomization';
 import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
 import { setNavState } from './navigationStore';
-import { mapStyles } from '@/styles/mapStyles';
+import { globalStyles } from '@/styles/globalStyles';
 import { apiFetch } from '@/lib/api';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -501,14 +501,14 @@ const MapNavigation = () => {
 
             {remainingDuration > 0 && (
                 <View
-                    style={statsExpanded ? mapStyles.tripInfoCardExpanded : mapStyles.tripInfoCard}
+                    style={statsExpanded ? globalStyles.tripInfoCardExpanded : globalStyles.tripInfoCard}
                     onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
                 >
                     <View style={styles.handle} />
                     <View style={styles.summaryRow}>
                         <HapticPressable hapticStyle="light" onPress={() => setStatsExpanded(prev => !prev)} style={{ flex: 1 }}>
-                            <Text style={mapStyles.timeText}>{formatDuration(remainingDuration)}</Text>
-                            <Text style={mapStyles.distanceText}>
+                            <Text style={globalStyles.timeText}>{formatDuration(remainingDuration)}</Text>
+                            <Text style={globalStyles.distanceText}>
                                 {totalDistanceMi.toFixed(1)} mi · Arrives {eta}
                             </Text>
                         </HapticPressable>
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
         width: 70,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#ef4444',
+        backgroundColor: THEME.COLOR.error,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -801,20 +801,6 @@ const styles = StyleSheet.create({
         fontSize: 26,
         fontWeight: '800',
         lineHeight: 32,
-    },
-    nextDestStats: {
-        flexDirection: 'row',
-        gap: 16,
-        marginTop: 2,
-    },
-    nextStatItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-    },
-    nextStatText: {
-        color: THEME.COLOR.neutral400,
-        fontSize: 14,
     },
     startButton: {
         marginTop: 4,

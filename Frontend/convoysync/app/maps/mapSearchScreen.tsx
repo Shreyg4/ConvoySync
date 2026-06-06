@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Platform, Text } from 'react-native';
+import { View, Platform, Text, StyleSheet, Dimensions } from 'react-native';
 import GooglePlacesTextInput, { type GooglePlacesTextInputRef } from 'react-native-google-places-textinput';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
 import * as Location from 'expo-location';
-import { mapStyles } from '../../styles/mapStyles';
+import { globalStyles } from '../../styles/globalStyles';
 import { THEME } from '../../theme';
 import { setSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,8 +63,8 @@ const MapSearchScreen = () => {
     const initialText = Array.isArray(params.currentText) ? params.currentText[0] || '' : params.currentText || '';
     const showUseMyLocation = params.placeholder?.includes('Origin') || params.placeholder === 'Your Location';
     const suggestionsContainerStyle = showUseMyLocation
-        ? [mapStyles.listViewFocused, { marginTop: 50 }]
-        : mapStyles.listViewFocused;
+        ? [styles.listViewFocused, { marginTop: 50 }]
+        : styles.listViewFocused;
 
     useEffect(() => {
         const focusTimeout = setTimeout(() => {
@@ -76,8 +76,8 @@ const MapSearchScreen = () => {
 
     return (
         <View style={{ flex: 1, backgroundColor: THEME.COLOR.black }}>
-            <SafeAreaView style={[mapStyles.searchContainer, { bottom: 0, backgroundColor: THEME.COLOR.black }]} pointerEvents='box-none'>
-                <View style={mapStyles.backButtonContainer}>
+            <SafeAreaView style={[globalStyles.searchContainer, { bottom: 0, backgroundColor: THEME.COLOR.black }]} pointerEvents='box-none'>
+                <View style={globalStyles.backButtonContainer}>
                     <BackHeader
                         title=""
                         icon='chevron-back'
@@ -110,9 +110,9 @@ const MapSearchScreen = () => {
                     }}
                     onError={(error: any) => console.error('Google Places Error:', error)}
                     style={{
-                        container: mapStyles.searchContainer2Focused,
-                        inputContainer: mapStyles.textInputContainer,
-                        input: [mapStyles.textInput, mapStyles.searchScreenTextInset],
+                        container: styles.searchContainer2Focused,
+                        inputContainer: globalStyles.textInputContainer,
+                        input: [globalStyles.textInput, styles.searchScreenTextInset],
                         suggestionsContainer: suggestionsContainerStyle,
                         placeholder: { color: THEME.COLOR.neutral400 },
                         suggestionText: {
@@ -155,7 +155,7 @@ const MapSearchScreen = () => {
                                     console.log('Error fetching location', e);
                                 }
                             }}
-                            style={mapStyles.useLocationButton}
+                            style={styles.useLocationButton}
                         >
                             <Text style={{ color: THEME.COLOR.black, fontWeight: '600' }}>Use my location</Text>
                         </HapticPressable>
@@ -165,5 +165,34 @@ const MapSearchScreen = () => {
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    searchContainer2Focused: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: '100%',
+        zIndex: 1,
+    },
+    searchScreenTextInset: {
+        paddingRight: 56,
+    },
+    listViewFocused: {
+        backgroundColor: THEME.COLOR.black,
+        flex: 1,
+        maxHeight: Dimensions.get('window').height,
+        marginHorizontal: 15,
+        elevation: 5,
+    },
+    useLocationButton: {
+        marginTop: Platform.select({ ios: 10, android: 30 }),
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 18,
+        backgroundColor: THEME.COLOR.mint,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+});
 
 export default MapSearchScreen;

@@ -9,7 +9,7 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
-import { mapStyles } from '../../styles/mapStyles';
+import { globalStyles } from '../../styles/globalStyles';
 import { THEME } from '../../theme';
 import { getTripPlannerDraft } from './tripPlannerStore';
 import { apiFetch } from '../../lib/api';
@@ -174,7 +174,7 @@ const MapDirections = () => {
             >
                 {destination && (
                     <Marker coordinate={destination} title={destinationLabel}>
-                        <Ionicons name="location" size={36} color="#ef4444" />
+                        <Ionicons name="location" size={36} color={THEME.COLOR.error} />
                     </Marker>
                 )}
 
@@ -241,15 +241,15 @@ const MapDirections = () => {
 
             {distance > 0 && duration > 0 && routeDestination && (
                 <View
-                    style={expanded ? mapStyles.tripInfoCardExpanded : mapStyles.tripInfoCard}
+                    style={expanded ? globalStyles.tripInfoCardExpanded : globalStyles.tripInfoCard}
                     onLayout={(e) => setCardHeight(e.nativeEvent.layout.height)}
                 >
                     <HapticPressable hapticStyle="light" onPress={() => setExpanded(prev => !prev)}>
                         <View style={styles.handle} />
                         <View style={styles.summaryRow}>
                             <View>
-                                <Text style={mapStyles.timeText}>{formatDuration(duration)}</Text>
-                                <Text style={mapStyles.distanceText}>
+                                <Text style={globalStyles.timeText}>{formatDuration(duration)}</Text>
+                                <Text style={globalStyles.distanceText}>
                                     {(distance * 0.621371).toFixed(1)} mi · Arrives {arrivalTime}
                                 </Text>
                             </View>
@@ -300,7 +300,7 @@ const MapDirections = () => {
 
             {locationGranted && (
                 <HapticPressable
-                    style={[mapStyles.locationButton, { bottom: cardHeight + 12 }]}
+                    style={[globalStyles.locationButton, { bottom: cardHeight + 12 }]}
                     hapticStyle="light"
                     onPress={() => {
                         if (origin) {
@@ -331,20 +331,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-    },
-    navigateButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: THEME.COLOR.mint,
-        borderRadius: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-    },
-    navigateButtonText: {
-        color: THEME.COLOR.black,
-        fontSize: 14,
-        fontWeight: '700',
     },
     emptyCard: {
         marginTop: 120,

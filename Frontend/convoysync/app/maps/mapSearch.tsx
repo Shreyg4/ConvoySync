@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
-import { mapStyles } from '../../styles/mapStyles';
+import { globalStyles } from '../../styles/globalStyles';
 import { THEME } from '../../theme';
 import { consumeSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
 
@@ -104,7 +104,7 @@ const MapSearch = () => {
             {/* Return to current location button */}
             {locationGranted && (
                 <HapticPressable
-                    style={mapStyles.locationButton}
+                    style={globalStyles.locationButton}
                     hapticStyle="light"
                     onPress={() => {
                         if (origin) {
@@ -122,11 +122,11 @@ const MapSearch = () => {
 
             {/* Search Bar */}
             <SafeAreaView
-                style={mapStyles.searchContainer}
+                style={globalStyles.searchContainer}
                 pointerEvents='box-none'
             >
                 {/* Back / Cancel / Clear button */}
-                <View style={mapStyles.backButtonContainer}>
+                <View style={globalStyles.backButtonContainer}>
                     <BackHeader
                         title=""
                         icon={destination ? 'close' : 'chevron-back'}
@@ -149,15 +149,15 @@ const MapSearch = () => {
                             },
                         });
                     }}
-                    style={mapStyles.searchContainer2}
+                    style={styles.searchContainer2}
                 >
-                    <View style={mapStyles.textInputContainer}>
+                    <View style={globalStyles.textInputContainer}>
                         <Text
                             numberOfLines={1}
                             ellipsizeMode='tail'
                             style={[
-                                mapStyles.textInput,
-                                mapStyles.searchTextInset,
+                                globalStyles.textInput,
+                                styles.searchTextInset,
                                 {
                                     top: Platform.select({ ios: 16, android: 14 }),
                                     maxWidth: '88%',
@@ -173,7 +173,7 @@ const MapSearch = () => {
 
             {/* Directions Button — always visible */}
             <HapticPressable
-                style={mapStyles.directionsButton}
+                style={styles.directionsButton}
                 hapticStyle="medium"
                 onPress={() => {
                     if (destination) {
@@ -195,5 +195,28 @@ const MapSearch = () => {
         </View>
     )
 }
+
+const styles = StyleSheet.create({
+    directionsButton: {
+        position: 'absolute',
+        bottom: 140,
+        right: 16,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: THEME.COLOR.mint,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    searchContainer2: {
+        position: 'absolute',
+        top: 0,
+        width: '100%',
+        zIndex: 1,
+    },
+    searchTextInset: {
+        paddingRight: 24,
+    },
+});
 
 export default MapSearch;
