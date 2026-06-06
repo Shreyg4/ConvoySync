@@ -2,14 +2,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../styles/globalStyles';
 import BackHeader from '../components/BackHeader';
 import { useForm, Controller } from 'react-hook-form';
-import { TextInput, Text, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { ActivityIndicator, Alert, TextInput, Text, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import React, { useState } from 'react';
 import HapticPressable from '../components/pressableCustomization';
 import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
-import { apiUrl } from '../lib/api';
-import { authHeader } from '../lib/oauth';
+import { apiFetch, ApiError } from '../lib/api';
 
 const CreateTrip = () => {
     const router = useRouter();
@@ -23,6 +22,7 @@ const CreateTrip = () => {
 
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
     const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
 
 
@@ -57,41 +57,29 @@ const CreateTrip = () => {
     // My contribution:
 
     const onSubmit = async (data: any) => {
-        const headers = await authHeader();
-        if (!headers.Authorization) {
-            console.log("Not signed in");
-            return;
-        }
-
+        if (submitting) return;
+        setSubmitting(true);
         try {
             // Owner is resolved from the JWT server-side; path id is ignored.
-            const response = await fetch(apiUrl(`/users/me/trips`), {
+            const trip = await apiFetch('/users/me/trips', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...headers,
-                },
-                body: JSON.stringify(data),
-            })
-            const text = await response.json();
-
-            if (!response.ok) {
-                console.log('status:', response.status);
-                console.log('body:', text);
-                return;
-            }
-
-            console.log(text);
+                body: data,
+            });
 
             router.push({
                 pathname: '/tripInfo',
                 params: {
-                    tripId: text.id,
+                    tripId: trip.id,
                 },
             });
-
         } catch (error) {
-            console.error('Network error:', error);
+            const message =
+                error instanceof ApiError
+                    ? error.message
+                    : 'Could not reach the server. Please try again.';
+            Alert.alert('Could not create trip', message);
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -156,8 +144,10 @@ const CreateTrip = () => {
                         </>
                     )}
                 />
-                <HapticPressable onPress={handleSubmit((data) => { onSubmit(data) })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback>
-                    <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>
+                <HapticPressable onPress={handleSubmit((data) => { onSubmit(data) })} style={globalStyles.SubmitButton} hapticStyle="medium" showVisualFeedback disabled={submitting}>
+                    {submitting
+                        ? <ActivityIndicator color="#fff" />
+                        : <Text style={globalStyles.SubmitButtonText}>Create Trip</Text>}
                 </HapticPressable>
             </SafeAreaView>
         </TouchableWithoutFeedback>

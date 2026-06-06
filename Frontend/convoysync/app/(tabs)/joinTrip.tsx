@@ -1,44 +1,42 @@
 import { useState } from 'react';
-import { Text, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { ActivityIndicator, Alert, Text, TextInput, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../../styles/globalStyles';
 import HapticPressable from '../../components/pressableCustomization';
-import { apiUrl } from '../../lib/api';
-import { authHeader } from '../../lib/oauth';
+import { apiFetch, ApiError } from '../../lib/api';
 import { useRouter } from 'expo-router';
 
 const JoinTrip = () => {
     const [code, setCode] = useState('');
-     const router = useRouter();
+    const [submitting, setSubmitting] = useState(false);
+    const router = useRouter();
 
     const onSubmit = async () => {
-        const headers = await authHeader();
-        if (!headers.Authorization) {
-            console.log("Not signed in");
+        if (submitting) return;
+
+        if (!code.trim()) {
+            Alert.alert('Enter a code', 'Please enter an invite code.');
             return;
         }
 
-        const response = await fetch(apiUrl(`/trips/join`), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...headers,
-            },
-            body: JSON.stringify({
-                inviteCode: code,
-            })
-        });
-
-        const text = await response.json();
-
-        if (!response.ok) {
-            // handle
-            console.log('status:', response.status);
-            console.log('body:', text);
-            return;
+        setSubmitting(true);
+        try {
+            await apiFetch('/trips/join', {
+                method: 'POST',
+                body: { inviteCode: code.trim() },
+            });
+            router.push('/home');
+        } catch (error) {
+            let message = 'Could not join the trip. Please try again.';
+            if (error instanceof ApiError) {
+                if (error.status === 404) message = 'That invite code is invalid.';
+                else if (error.status === 409) message = "You've already joined this trip.";
+                else message = error.message;
+            }
+            Alert.alert('Could not join', message);
+        } finally {
+            setSubmitting(false);
         }
-
-        router.push('/home');
     }
 
     return (
@@ -60,8 +58,11 @@ const JoinTrip = () => {
                     style={globalStyles.SubmitButton}
                     hapticStyle="medium"
                     showVisualFeedback
+                    disabled={submitting}
                 >
-                    <Text style={globalStyles.SubmitButtonText}>Join Trip</Text>
+                    {submitting
+                        ? <ActivityIndicator color="#fff" />
+                        : <Text style={globalStyles.SubmitButtonText}>Join Trip</Text>}
                 </HapticPressable>
             </SafeAreaView>
         </TouchableWithoutFeedback>

@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { globalStyles } from '../../styles/globalStyles';
 import { Link } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
-import { apiUrl } from '../../lib/api';
-import { authHeader } from '../../lib/oauth';
+import { apiFetch, ApiError } from '../../lib/api';
+import { signOut } from '../../lib/oauth';
 import { useRouter } from "expo-router";
 import { ScrollView } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,41 +20,31 @@ type Trip = {
     role: "owner" | "member";
 };
 
-const home = () => {
+const Home = () => {
     const [trips, setTrips] = useState<Trip[]>([]);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const router = useRouter();
 
     useFocusEffect(
         useCallback(() => {
             const loadTrips = async () => {
                 try {
-                    const headers = await authHeader();
-                    if (!headers.Authorization) {
-                        console.log("Not signed in");
-                        return;
-                    }
-
-                    const response = await fetch(
-                        apiUrl(`/users/me/trips`),
-                        { headers }
-                    );
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        console.log("status:", response.status);
-                        console.log("body:", data);
-                        return;
-                    }
-
+                    setErrorMsg(null);
+                    const data = await apiFetch('/users/me/trips');
                     setTrips(data);
                 } catch (error) {
-                    console.error("Load trips error:", error);
+                    // Expired/missing session -> send the user back to log in.
+                    if (error instanceof ApiError && error.status === 401) {
+                        await signOut();
+                        router.replace('/login');
+                        return;
+                    }
+                    setErrorMsg('Could not load your trips. Please try again.');
                 }
             };
 
             loadTrips();
-        }, [])
+        }, [router])
     );
 
     return (
@@ -66,7 +56,9 @@ const home = () => {
                 contentContainerStyle={{ paddingBottom: 20 }}
                 showsVerticalScrollIndicator={true}
             >
-                {trips.length > 0 ? (
+                {errorMsg ? (
+                    <Text style={[globalStyles.title, { color: '#ef4444' }]}>{errorMsg}</Text>
+                ) : trips.length > 0 ? (
                     trips.map((trip) => (
                         <HapticPressable
                             key={trip.id}
@@ -107,4 +99,4 @@ const home = () => {
     );
 }
 
-export default home;
+export default Home;

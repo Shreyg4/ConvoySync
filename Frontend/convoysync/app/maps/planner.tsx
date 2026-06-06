@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { Alert, View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,8 +8,7 @@ import BackHeader from '@/components/BackHeader';
 import HapticPressable from '@/components/pressableCustomization';
 import { mapStyles } from '../../styles/mapStyles';
 import { THEME } from '../../theme';
-import { apiUrl } from '../../lib/api';
-import { authHeader } from '../../lib/oauth';
+import { apiFetch, ApiError } from '../../lib/api';
 import { consumeSelectedMapPlace } from './mapSearchSelectionStore';
 import {
     type RouteSelectionTarget,
@@ -62,11 +61,9 @@ const Planner = () => {
         if (isSaving || isSaved) return;
         setIsSaving(true);
         try {
-            const headers = await authHeader();
-            const response = await fetch(apiUrl(`/trips/${tripId}/itinerary/stops`), {
+            await apiFetch(`/trips/${tripId}/itinerary/stops`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', ...headers },
-                body: JSON.stringify({
+                body: {
                     startLocation: customOrigin ? {
                         name: originLabel,
                         address: originLabel,
@@ -74,21 +71,17 @@ const Planner = () => {
                         long: customOrigin.longitude,
                     } : null,
                     stops: myStops,
-                }),
+                },
             });
-
-            const text = await response.json();
-
-            if (!response.ok) {
-                console.log('status:', response.status);
-                console.log('body:', text);
-                return;
-            }
 
             setSavedSnapshotKey(currentSnapshotKey);
             router.replace({ pathname: '/tripInfo', params: { tripId } });
         } catch (error) {
-            console.error('Network error:', error);
+            const message =
+                error instanceof ApiError
+                    ? error.message
+                    : 'Could not reach the server. Please try again.';
+            Alert.alert('Could not save trip', message);
         } finally {
             setIsSaving(false);
         }
@@ -120,19 +113,7 @@ const Planner = () => {
 
         const loadItineraryStops = async () => {
             try {
-                const headers = await authHeader();
-                const response = await fetch(
-                    apiUrl(`/trips/${tripId}/itinerary/stops`),
-                    { headers }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    console.log("status:", response.status);
-                    console.log("body:", data);
-                    return;
-                }
+                const data = await apiFetch(`/trips/${tripId}/itinerary/stops`);
 
                 if (data.startLocation) {
                     setCustomOrigin({

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -9,8 +9,8 @@ import { THEME } from '@/theme';
 import { getTripPlannerDraft } from './maps/tripPlannerStore';
 import { globalStyles } from '@/styles/globalStyles';
 import { useLocalSearchParams } from 'expo-router';
-import { apiUrl } from '@/lib/api';
-import { authHeader } from '@/lib/oauth';
+import { apiFetch, ApiError } from '@/lib/api';
+import { signOut } from '@/lib/oauth';
 
 type PartyMember = {
     id: string;
@@ -86,14 +86,7 @@ const TripInfo = () => {
     const loadTrip = useCallback(async () => {
         if (!tripId) return;
         try {
-            const headers = await authHeader();
-            const response = await fetch(apiUrl(`/trips/${tripId}`), { headers });
-            const data = await response.json();
-            if (!response.ok) {
-                console.log("status:", response.status);
-                console.log("body:", data);
-                return;
-            }
+            const data = await apiFetch(`/trips/${tripId}`);
             setTrip(data);
             const nextItinerary: ItineraryItem[] = [];
             if (data.startLocation) {
@@ -117,9 +110,17 @@ const TripInfo = () => {
             setItinerary(nextItinerary);
             setHasRoute(stops.length > 0);
         } catch (error) {
-            console.error("Load trip error:", error);
+            if (error instanceof ApiError && error.status === 401) {
+                await signOut();
+                router.replace('/login');
+                return;
+            }
+            Alert.alert(
+                'Could not load trip',
+                error instanceof ApiError ? error.message : 'Please try again.'
+            );
         }
-    }, [tripId]);
+    }, [tripId, router]);
 
     useFocusEffect(useCallback(() => { loadTrip(); }, [loadTrip]));
 

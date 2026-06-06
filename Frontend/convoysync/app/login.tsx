@@ -6,7 +6,7 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiUrl } from '../lib/api';
+import { apiFetch, ApiError } from '../lib/api';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
 
 const Login = () => {
@@ -18,37 +18,33 @@ const Login = () => {
     });
     const router = useRouter();
     const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
     const onSubmit = async (data: any) => {
-        // proceed to home only when form is valid
+        if (submitting) return;
+        setSubmitting(true);
         try {
-            const response = await fetch(apiUrl('/auth/login'), {
+            const result = await apiFetch('/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
+                body: data,
+                auth: false,
             });
 
-            const text = await response.json();
-
-            if (!response.ok) {
-                // handle
-                console.log('status:', response.status);
-                console.log('body:', text);
-                return;
-            }
-
             // Persist the JWT so authenticated requests (trips, etc.) work.
-            if (text.token) {
-                await AsyncStorage.setItem("token", text.token);
+            if (result.token) {
+                await AsyncStorage.setItem("token", result.token);
             }
-            await AsyncStorage.setItem("userId", String(text.user?.id ?? text.id));
+            await AsyncStorage.setItem("userId", String(result.user?.id ?? result.id));
 
             router.push('/home');
-
         } catch (error) {
-            console.error('Network error:', error);
+            const message =
+                error instanceof ApiError
+                    ? error.message
+                    : 'Could not reach the server. Please try again.';
+            Alert.alert('Login failed', message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -100,8 +96,10 @@ const Login = () => {
                                 secureTextEntry
                             />
                         )} />
-                    <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="light" showVisualFeedback>
-                        <Text style={globalStyles.SubmitButtonText}>Login</Text>
+                    <HapticPressable onPress={handleSubmit(onSubmit)} style={globalStyles.SubmitButton} hapticStyle="light" showVisualFeedback disabled={submitting}>
+                        {submitting
+                            ? <ActivityIndicator color="#fff" />
+                            : <Text style={globalStyles.SubmitButtonText}>Login</Text>}
                     </HapticPressable>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 24 }}>

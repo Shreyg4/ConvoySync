@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
 import { signOut } from '../../lib/oauth';
 
-const settings = () => {
+const Settings = () => {
     const router = useRouter();
 
     // Clear the stored JWT (and userId) before leaving, otherwise the session
@@ -37,4 +37,4 @@ const settings = () => {
     )
 }
 
-export default settings;
+export default Settings;
