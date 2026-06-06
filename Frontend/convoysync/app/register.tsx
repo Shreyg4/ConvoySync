@@ -6,11 +6,28 @@ import { Link, useRouter } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 import { Controller, useForm } from 'react-hook-form';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiUrl } from '../lib/api';
+import { apiFetch, ApiError } from '../lib/api';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
 
+type RegisterForm = {
+    email: string;
+    username: string;
+    password: string;
+    confirmPassword: string;
+};
+
+type SignupResponse = {
+    token: string;
+    user: { id: number };
+    id?: number;
+};
+
+/**
+ * Account creation screen. Uses /auth/signup so new email users receive a JWT
+ * and can immediately load their trips after registration.
+ */
 const Register = () => {
-    const { control, handleSubmit, setError } = useForm({
+    const { control, handleSubmit, setError } = useForm<RegisterForm>({
         defaultValues: {
             email: '',
             username: '',
@@ -21,41 +38,33 @@ const Register = () => {
     const router = useRouter();
     const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: RegisterForm) => {
         if (data.password !== data.confirmPassword) {
             setError('confirmPassword', { type: 'validate', message: 'Passwords do not match' });
             return;
         }
 
         try {
-            // /auth/signup creates the account AND returns a JWT, so the new user
-            // is authenticated immediately. (/users does neither and is being removed.)
-            const response = await fetch(apiUrl('/auth/signup'), {
+            const result = await apiFetch<SignupResponse>('/auth/signup', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+                auth: false,
+                body: {
                     email: data.email,
                     name: data.username,
                     password: data.password,
-                }),
-            })
+                },
+            });
 
-            const text = await response.json();
-
-            if (!response.ok) {
-                Alert.alert('Registration failed', text.error || 'Please try again');
-                return;
+            if (result.token) {
+                await AsyncStorage.setItem("token", result.token);
             }
-
-            if (text.token) {
-                await AsyncStorage.setItem("token", text.token);
-            }
-            await AsyncStorage.setItem("userId", String(text.user?.id ?? text.id));
+            await AsyncStorage.setItem("userId", String(result.user?.id ?? result.id));
         } catch (error) {
-            console.error('Network error:', error);
-            Alert.alert('Network error', 'Could not reach the server. Please try again.');
+            const message =
+                error instanceof ApiError
+                    ? error.message
+                    : 'Could not reach the server. Please try again.';
+            Alert.alert('Registration failed', message);
             return;
         }
 

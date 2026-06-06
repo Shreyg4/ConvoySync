@@ -1,5 +1,7 @@
-// Shared domain types mirroring the JSON the backend returns.
-// Centralized here so screens don't each redefine the same shapes.
+/**
+ * Shared domain types mirroring the JSON the backend returns. Centralized here
+ * so screens do not each redefine the same trip/member/location shapes.
+ */
 
 export type Role = 'owner' | 'member';
 

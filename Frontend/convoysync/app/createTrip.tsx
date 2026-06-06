@@ -10,9 +10,23 @@ import { THEME } from '@/theme';
 import { useRouter } from 'expo-router';
 import { apiFetch, ApiError } from '../lib/api';
 
+type CreateTripForm = {
+    tripName: string;
+    tripDate: string;
+    tripTime: string;
+};
+
+type CreatedTrip = {
+    id: number;
+};
+
+/**
+ * Owner flow for creating a trip shell before adding itinerary stops. The
+ * backend owns invite-code generation and resolves the owner from the JWT.
+ */
 const CreateTrip = () => {
     const router = useRouter();
-    const { control, handleSubmit, setValue } = useForm({
+    const { control, handleSubmit, setValue } = useForm<CreateTripForm>({
         defaultValues: {
             tripName: '',
             tripDate: '',
@@ -56,12 +70,12 @@ const CreateTrip = () => {
 
     // My contribution:
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: CreateTripForm) => {
         if (submitting) return;
         setSubmitting(true);
         try {
             // Owner is resolved from the JWT server-side; path id is ignored.
-            const trip = await apiFetch('/users/me/trips', {
+            const trip = await apiFetch<CreatedTrip>('/users/me/trips', {
                 method: 'POST',
                 body: data,
             });

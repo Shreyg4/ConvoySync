@@ -13,6 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
+/**
+ * Extracts a readable label from the Places component's different response
+ * shapes so saved stops do not show opaque provider fields.
+ */
 const getPlaceLabel = (place: any) => {
     const displayNameText =
         typeof place?.details?.displayName === 'object'

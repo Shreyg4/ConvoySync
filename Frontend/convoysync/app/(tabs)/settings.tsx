@@ -5,6 +5,9 @@ import { useRouter } from 'expo-router';
 import HapticPressable from '../../components/pressableCustomization';
 import { signOut } from '../../lib/oauth';
 
+/**
+ * Small account settings screen for ending the current authenticated session.
+ */
 const Settings = () => {
     const router = useRouter();
 

@@ -4,6 +4,10 @@ import { globalStyles } from '../styles/globalStyles';
 import { Link } from 'expo-router';
 import HapticPressable from '../components/pressableCustomization';
 
+/**
+ * Welcome screen that lets signed-out users choose email/OAuth login or create
+ * a new ConvoySync account.
+ */
 const index = () => {
     return (
         <SafeAreaView style={globalStyles.container}>
@@ -29,4 +33,3 @@ const index = () => {
 }
 
 export default index;
-

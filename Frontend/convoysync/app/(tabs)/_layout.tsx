@@ -3,6 +3,10 @@ import {Ionicons} from "@expo/vector-icons"
 import { THEME } from '../../theme'
 import { Platform } from 'react-native';
 
+/**
+ * Bottom-tab shell for the authenticated app: trips, joining by invite code,
+ * and account settings.
+ */
 const tabsLayout = () => {
     return (
         <Tabs screenOptions={{

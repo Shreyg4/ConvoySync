@@ -19,6 +19,10 @@ const ADVANCE_THRESHOLD_METERS = 40;
 const ARRIVAL_THRESHOLD_METERS = 250;
 const HEADING_CAMERA_DELAY_MS = 450;
 
+/**
+ * Converts Google Directions maneuver codes into Ionicons names for the live
+ * instruction banner and directions list.
+ */
 const getManeuverIcon = (maneuver?: string): any => {
     switch (maneuver) {
         case 'turn-left': case 'turn-sharp-left': case 'ramp-left': case 'fork-left': case 'keep-left': return 'arrow-back';
@@ -57,6 +61,10 @@ const formatDistanceToTurn = (meters: number): string => {
     return `${(meters * 0.000621371).toFixed(1)} mi`;
 };
 
+/**
+ * Live navigation screen. Tracks device location, advances route legs as the
+ * user approaches stops, and shares the active route with the directions sheet.
+ */
 const MapNavigation = () => {
     const router = useRouter();
     const { tripId, returnTo } = useLocalSearchParams<{ tripId?: string; returnTo?: string }>();
@@ -75,7 +83,6 @@ const MapNavigation = () => {
         duration?: number;
     } | null>(null);
 
-    const [customOrigin, setCustomOrigin] = useState<{ latitude: number; longitude: number } | null>(null);
     const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
     const [destinationLabel, setDestinationLabel] = useState('');
     const [stops, setStops] = useState<{ latitude: number; longitude: number; label: string }[]>([]);
@@ -117,7 +124,7 @@ const MapNavigation = () => {
         }
     };
 
-    const focusCamera = (
+    const focusCamera = React.useCallback((
         center: { latitude: number; longitude: number },
         nextHeading: number,
         duration?: number
@@ -129,15 +136,17 @@ const MapNavigation = () => {
             zoom: 17,
         };
 
+        // MapView can receive location data before native map initialization;
+        // store one pending camera move and replay it in onMapReady.
         if (!mapReadyRef.current) {
             pendingCameraRef.current = { ...camera, duration };
             return;
         }
 
         mapRef.current?.animateCamera(camera, duration ? { duration } : undefined);
-    };
+    }, []);
 
-    const scheduleHeadingCameraUpdate = (nextHeading: number) => {
+    const scheduleHeadingCameraUpdate = React.useCallback((nextHeading: number) => {
         if (headingCameraTimeoutRef.current) {
             clearTimeout(headingCameraTimeoutRef.current);
         }
@@ -150,7 +159,7 @@ const MapNavigation = () => {
 
             focusCamera(loc, nextHeading, 250);
         }, HEADING_CAMERA_DELAY_MS);
-    };
+    }, [focusCamera]);
 
     useEffect(() => {
         if (tripId) {
@@ -159,10 +168,14 @@ const MapNavigation = () => {
                     const data = await apiFetch(`/trips/${tripId}/itinerary/stops`);
 
                     if (data.startLocation) {
-                        setCustomOrigin({
+                        // Saved trips may start from a custom point instead of
+                        // the user's live position; use that as the route origin.
+                        const startLocation = {
                             latitude: data.startLocation.latitude,
                             longitude: data.startLocation.longitude,
-                        });
+                        };
+                        setRouteStartOrigin(startLocation);
+                        routeStartOriginSetRef.current = true;
                     }
 
                     const loadedStops: { latitude: number; longitude: number; label: string }[] =
@@ -185,22 +198,26 @@ const MapNavigation = () => {
             loadItinerary();
         } else {
             const draft = getTripPlannerDraft();
-            setCustomOrigin(draft.customOrigin);
             setDestination(draft.destination);
             setDestinationLabel(draft.destinationLabel);
             setStops(draft.stops);
             if (draft.customOrigin) {
+                // Planner-preview navigation can also start from a custom origin.
                 setRouteStartOrigin(draft.customOrigin);
                 routeStartOriginSetRef.current = true;
             }
         }
     }, [tripId]);
 
+    // Location callbacks close over old state, so mirror the moving indices in
+    // refs. The callbacks always read the newest leg/step without resubscribing.
     useEffect(() => { legsRef.current = legs; }, [legs]);
     useEffect(() => { legIndexRef.current = legIndex; }, [legIndex]);
     useEffect(() => { stepIndexRef.current = stepIndex; }, [stepIndex]);
 
     useEffect(() => {
+        // Navigation routes one destination at a time: destination first, then
+        // each extra stop. This ref powers arrival checks inside GPS callbacks.
         const activeStops = stops.filter(s => s.latitude !== 0 || s.longitude !== 0);
         const pts = destination ? [destination, ...activeStops] : activeStops;
         routeDestinationRef.current = pts[currentDestIndex] ?? null;
@@ -254,7 +271,7 @@ const MapNavigation = () => {
                     headingCameraTimeoutRef.current = null;
                 }
             };
-        }, [])
+        }, [focusCamera])
     );
 
     useEffect(() => {
@@ -279,6 +296,8 @@ const MapNavigation = () => {
             setInitialLocationReady(true);
             focusCamera(initLoc, initial.coords.heading ?? 0);
             if (!routeStartOriginSetRef.current) {
+                // If no custom start was loaded, the first GPS fix becomes the
+                // route origin for the active navigation session.
                 setRouteStartOrigin(initLoc);
                 routeStartOriginSetRef.current = true;
             }
@@ -310,6 +329,8 @@ const MapNavigation = () => {
                     const si = stepIndexRef.current;
                     const step = legsRef.current[li]?.steps?.[si];
                     if (step?.end_location) {
+                        // Advance the visible instruction as the user gets near
+                        // the current step's endpoint.
                         const dist = haversine(
                             latitude, longitude,
                             step.end_location.lat, step.end_location.lng
@@ -332,6 +353,8 @@ const MapNavigation = () => {
                     }
 
                     if (!arrivedRef.current && routeDestinationRef.current) {
+                        // Separate final-arrival check prevents a route from
+                        // getting stuck on its last instruction near the stop.
                         const distToFinal = haversine(latitude, longitude, routeDestinationRef.current.latitude, routeDestinationRef.current.longitude);
                         if (distToFinal < ARRIVAL_THRESHOLD_METERS) {
                             arrivedRef.current = true;
@@ -351,7 +374,7 @@ const MapNavigation = () => {
             sub?.remove();
             headingSub?.remove();
         };
-    }, []);
+    }, [focusCamera, scheduleHeadingCameraUpdate]);
 
     const activeStops = stops.filter(s => s.latitude !== 0 || s.longitude !== 0);
     const legLabels = destination
@@ -425,6 +448,8 @@ const MapNavigation = () => {
                     </Marker>
                     {routeStartOrigin && routePoints[currentDestIndex] && (
                         <MapViewDirections
+                            // Key includes active destination/origin so the
+                            // directions component recalculates each leg.
                             key={`route-${currentDestIndex}-${routeStartOrigin.latitude.toFixed(4)}-${routePoints[currentDestIndex]!.latitude.toFixed(4)}`}
                             origin={routeStartOrigin}
                             destination={routePoints[currentDestIndex]!}
@@ -443,6 +468,8 @@ const MapNavigation = () => {
                                 setStepIndex(0);
                                 legIndexRef.current = 0;
                                 stepIndexRef.current = 0;
+                                // The separate directions sheet reads this
+                                // snapshot instead of serializing large route legs.
                                 setNavState({
                                     legs: fetchedLegs,
                                     legLabels,

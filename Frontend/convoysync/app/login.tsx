@@ -9,8 +9,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch, ApiError } from '../lib/api';
 import { signInWithProvider, OAuthProvider } from '../lib/oauth';
 
+type LoginForm = {
+    email: string;
+    password: string;
+};
+
+type LoginResponse = {
+    token: string;
+    user: { id: number };
+    id?: number;
+};
+
+/**
+ * Email/password and OAuth sign-in screen. Successful auth persists the JWT so
+ * the trip screens can make authenticated backend requests.
+ */
 const Login = () => {
-    const { control, handleSubmit } = useForm({
+    const { control, handleSubmit } = useForm<LoginForm>({
         defaultValues: {
             email: '',
             password: '',
@@ -20,11 +35,11 @@ const Login = () => {
     const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: LoginForm) => {
         if (submitting) return;
         setSubmitting(true);
         try {
-            const result = await apiFetch('/auth/login', {
+            const result = await apiFetch<LoginResponse>('/auth/login', {
                 method: 'POST',
                 body: data,
                 auth: false,

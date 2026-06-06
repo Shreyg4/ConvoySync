@@ -6,6 +6,10 @@ import HapticPressable from '../../components/pressableCustomization';
 import { apiFetch, ApiError } from '../../lib/api';
 import { useRouter } from 'expo-router';
 
+/**
+ * Invite-code join screen. Validates blank codes locally and maps backend
+ * conflict/not-found responses into user-facing messages.
+ */
 const JoinTrip = () => {
     const [code, setCode] = useState('');
     const [submitting, setSubmitting] = useState(false);

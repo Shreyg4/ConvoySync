@@ -1,3 +1,7 @@
+/**
+ * In-memory draft store for the itinerary planner. It preserves route choices
+ * while Expo Router moves between the planner and place-search screens.
+ */
 export type RouteSelectionTarget =
     | { kind: 'origin' }
     | { kind: 'destination' }

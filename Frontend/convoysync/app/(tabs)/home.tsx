@@ -10,6 +10,10 @@ import { apiFetch, ApiError } from '../../lib/api';
 import { signOut } from '../../lib/oauth';
 import type { TripSummary } from '../../lib/types';
 
+/**
+ * Authenticated landing screen. Loads the user's owned/joined trips whenever
+ * the tab regains focus and redirects expired sessions back to login.
+ */
 const Home = () => {
     const [trips, setTrips] = useState<TripSummary[]>([]);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);

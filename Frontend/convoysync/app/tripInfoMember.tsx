@@ -1,6 +1,9 @@
 import TripDetailScreen from '@/components/TripDetailScreen';
 
-// Member view of a trip — same screen as the owner view, without editing.
+/**
+ * Member route for trip details. Reuses the shared trip detail component in
+ * read-only mode for joined convoy members.
+ */
 const TripInfoMember = () => <TripDetailScreen isOwner={false} />;
 
 export default TripInfoMember;

@@ -21,6 +21,10 @@ const MAX_STOPS = 5;
 
 const getStopColor = (index: number) => STOP_COLORS[index % STOP_COLORS.length];
 
+/**
+ * Trip itinerary builder. Lets owners choose an origin, destination, and extra
+ * stops, then saves the ordered route to the backend.
+ */
 const Planner = () => {
     const router = useRouter();
     const [originLabel, setOriginLabel] = useState('Your Location');
@@ -29,10 +33,6 @@ const Planner = () => {
     const [destination, setDestination] = useState<{ latitude: number; longitude: number } | null>(null);
     const [stops, setStops] = useState<RouteStop[]>([]);
     const [selectionTarget, setSelectionTarget] = useState<RouteSelectionTarget | null>(null);
-    // my contributions: //
-    // need an array for storing stops (stop order + eta?)
-    // need to store location data in a stop
-
     const { tripId } = useLocalSearchParams();
 
     type Location = {
@@ -52,6 +52,8 @@ const Planner = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
+    // Tracks the last saved planner payload so the Save button can become a
+    // harmless no-op after the current route is already persisted.
     const currentSnapshotKey = JSON.stringify({ myStops, customOrigin });
     const isSaved = savedSnapshotKey !== null && savedSnapshotKey === currentSnapshotKey;
 
@@ -85,17 +87,17 @@ const Planner = () => {
         }
     }
 
-    // end my contributions // 
-
+    // Restore the in-memory planner draft when returning from map/search screens.
     useEffect(() => {
         const draft = getTripPlannerDraft();
         setOriginLabel(draft.originLabel);
         setCustomOrigin(draft.customOrigin);
         setDestinationLabel(draft.destinationLabel);
         setDestination(draft.destination);
-        // setStops(draft.stops);
     }, []);
 
+    // Keep the draft store warm before route changes; Expo Router unmounts this
+    // screen while the user picks places, so component state alone would be lost.
     useEffect(() => {
         setTripPlannerDraft({
             originLabel,
@@ -122,6 +124,8 @@ const Planner = () => {
                     setOriginLabel(data.startLocation.name);
                 }
 
+                // Backend stops are 1-based: order 1 is the destination, and
+                // every later order is an optional extra stop.
                 const loadedMyStops: Stop[] = data.stops.map((stop: any) => ({
                     order: stop.stopOrder,
                     eta: stop.eta,
@@ -177,6 +181,8 @@ const Planner = () => {
 
     const nextLabel = selectedPlace.description || "";
 
+    // Keep both representations in sync: `stops` drives the planner UI, while
+    // `myStops` matches the backend's ordered itinerary payload.
     const newBackendStop = {
       location: {
         name: selectedPlace.description ?? "Unknown location",
@@ -205,6 +211,8 @@ const Planner = () => {
       setDestinationLabel(nextLabel || "Destination");
 
       setMyStops((prev) => {
+        // Replacing the destination preserves extra stops but re-numbers them
+        // after the new order-1 destination.
         const withoutOldDestination = prev.filter((stop) => stop.order !== 1);
 
         return [
@@ -240,6 +248,8 @@ const Planner = () => {
       setMyStops((prev) => {
         const next = [...prev];
 
+        // Extra-stop indices are zero-based in UI state but one slot later in
+        // the backend payload because destination occupies order 1.
         const backendIndex = selectionTarget.stopIndex + 1;
 
         next[backendIndex] = {
@@ -263,6 +273,8 @@ const Planner = () => {
     const openSearchScreen = useCallback((target: RouteSelectionTarget) => {
         setSelectionTarget(target);
 
+        // The search screen is generic; placeholder/currentText tell it which
+        // planner field is being edited and what label to show initially.
         const paramsObj: { placeholder: string; currentText?: string } = {
             placeholder: target.kind === 'origin'
                 ? 'Your Location'
@@ -305,6 +317,8 @@ const Planner = () => {
         setMyStops((currentMyStops) =>
             currentMyStops
                 .filter((stop) => stop.order !== stopIndex + 2)
+                // Re-number after deletion so the backend receives contiguous
+                // stop orders with no gaps.
                 .map((stop, index) => ({
                     ...stop,
                     order: index + 1,
@@ -320,6 +334,8 @@ const Planner = () => {
 
     const deleteDestination = useCallback(() => {
         setStops((currentStops) => {
+            // Promote the first extra stop to destination so the route still has
+            // a valid endpoint when possible.
             const [nextDestination, ...remainingStops] = currentStops;
 
             if (nextDestination) {

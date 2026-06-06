@@ -8,6 +8,10 @@ import BackHeader from '@/components/BackHeader';
 import { THEME } from '../../theme';
 import { getNavState } from './navigationStore';
 
+/**
+ * Converts Google Directions maneuver codes into Ionicons names for the
+ * detailed navigation step list.
+ */
 const getManeuverIcon = (maneuver?: string): any => {
     switch (maneuver) {
         case 'turn-left': case 'turn-sharp-left': case 'ramp-left': case 'fork-left': case 'keep-left': return 'arrow-back';
@@ -27,6 +31,9 @@ const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '');
 const formatDuration = (mins: number) =>
     mins >= 60 ? `${Math.floor(mins / 60)} hr ${Math.ceil(mins % 60)} min` : `${Math.ceil(mins)} min`;
 
+/**
+ * Read-only directions sheet for the currently active navigation route.
+ */
 const NavDirections = () => {
     const router = useRouter();
     const { legs, legLabels, remainingDuration, totalDistanceMi, activeLegIndex } = getNavState();

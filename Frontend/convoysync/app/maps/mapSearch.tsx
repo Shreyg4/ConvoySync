@@ -12,6 +12,10 @@ import { globalStyles } from '../../styles/globalStyles';
 import { THEME } from '../../theme';
 import { consumeSelectedMapPlace } from '@/app/maps/mapSearchSelectionStore';
 
+/**
+ * Standalone map search screen for previewing a selected destination from the
+ * current location before opening directions.
+ */
 const MapSearch = () => {
     const router = useRouter();
     const mapRef = useRef<MapView>(null);

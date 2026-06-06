@@ -19,6 +19,10 @@ const STOP_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ec4899'];
 
 const getStopColor = (index: number) => STOP_COLORS[index % STOP_COLORS.length];
 
+/**
+ * Converts Google Directions maneuver codes into Ionicons names for the
+ * turn-by-turn preview list.
+ */
 const getManeuverIcon = (maneuver?: string) => {
     switch (maneuver) {
         case 'turn-left': case 'turn-sharp-left': case 'ramp-left': case 'fork-left': case 'keep-left': return 'arrow-back';
@@ -72,6 +76,8 @@ const MapDirections = () => {
                         const data = await apiFetch(`/trips/${tripId}/itinerary/stops`);
 
                         if (data.startLocation) {
+                            // Persisted routes can start from a chosen place;
+                            // otherwise the current GPS location becomes origin.
                             const origin = {
                                 latitude: data.startLocation.latitude,
                                 longitude: data.startLocation.longitude,
@@ -88,6 +94,8 @@ const MapDirections = () => {
                                 label: stop.location.name,
                             }));
 
+                        // Backend order mirrors the planner: first stop is the
+                        // destination, remaining stops become map waypoints.
                         const [first, ...rest] = loadedStops;
                         if (first) {
                             setDestination({ latitude: first.latitude, longitude: first.longitude });
@@ -120,6 +128,8 @@ const MapDirections = () => {
 
     const activeOrigin = customOrigin || origin;
     const activeStops = stops.filter((stop) => stop.latitude !== 0 || stop.longitude !== 0);
+    // MapViewDirections expects a final destination plus intermediate waypoints,
+    // while the UI stores destination + extra stops as one ordered list.
     const routePoints = destination
         ? [{ latitude: destination.latitude, longitude: destination.longitude }, ...activeStops]
         : activeStops;

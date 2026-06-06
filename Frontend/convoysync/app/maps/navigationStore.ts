@@ -1,3 +1,7 @@
+/**
+ * In-memory navigation snapshot shared by the live map and the directions
+ * detail sheet. It avoids serializing large Google Directions legs in routes.
+ */
 type NavState = {
     legs: any[];
     legLabels: string[];
